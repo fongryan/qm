@@ -112,7 +112,7 @@ function draw(): void {
         const find=(id:string)=>points.find(x=>x.id===id);
         const edges:Array<{a:string;b:string;label:string}>=[];
         tickets.forEach(t=>{if(t.workerId&&find(t.workerId))edges.push({a:`ticket-${t.id}`,b:t.workerId,label:'assigned'});if(t.policyId&&find(`fact-${t.policyId}`))edges.push({a:`ticket-${t.id}`,b:`fact-${t.policyId}`,label:'cites'});if(t.reviewNoteId&&find(`fact-${t.reviewNoteId}`)){edges.push({a:'human',b:`fact-${t.reviewNoteId}`,label:'wrote'});edges.push({a:`ticket-${t.id}`,b:'human',label:'reviewed'});}});
-        const h=Math.max(450,180+Math.ceil(tickets.length/2)*68);
+        const h=460;
         return svg`<svg viewBox=${`0 0 460 ${h}`} class="evidence-map" role="img" aria-label=${`${points.length} nodes and ${edges.length} observed links`}>
           ${edges.map(e=>{const a=find(e.a)!,b=find(e.b)!;return svg`<line x1=${a.x} y1=${a.y} x2=${b.x} y2=${b.y} class="evidence-edge"/>`;})}
           ${points.map(p=>svg`<g class=${`evidence-node ${p.kind}`}><title>${p.label}</title>${p.kind==='policy'||p.kind==='note'?svg`<rect x=${p.x-8} y=${p.y-8} width="16" height="16" rx="2"/>`:p.kind==='ticket'?svg`<rect x=${p.x-8} y=${p.y-8} width="16" height="16" transform=${`rotate(45 ${p.x} ${p.y})`}/>`:svg`<circle cx=${p.x} cy=${p.y} r="9"/>`}<text x=${p.x+12} y=${p.y+3}>${p.label}</text></g>`)}
