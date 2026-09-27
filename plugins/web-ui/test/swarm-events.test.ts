@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mergeMessages, normalizeSwarm, type SwarmInspection, type SwarmMessageView } from "../src/swarm-events.ts";
+import { graphLayout, mergeMessages, normalizeSwarm, type SwarmInspection, type SwarmMessageView } from "../src/swarm-events.ts";
 
 const inspect: SwarmInspection = {
   id: "root", self: { id: "root", depth: 0, state: "ready" },
@@ -23,4 +23,12 @@ test("deduplicates overlapping pages and retains sequence order", () => {
   const second = { ...message, id: "m2", seq: 2, text: "Result" };
   assert.deepEqual(mergeMessages([message], [second, message]).map((m) => m.seq), [1, 2]);
   assert.deepEqual(normalizeSwarm(inspect, [second, message]).filter((e) => e.kind === "message").map((e) => e.key), ["message:1", "message:2"]);
+});
+
+test("topology maps parent edge and distinct depth rows without exposing IDs as labels", () => {
+  const nodes = graphLayout(inspect.peers);
+  assert.deepEqual(nodes.map(({ x, y, parentId }) => ({ x, y, parentId })), [
+    { x: 450, y: 55, parentId: undefined },
+    { x: 450, y: 167, parentId: "root" },
+  ]);
 });

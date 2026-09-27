@@ -38,3 +38,15 @@
 .swarm-member.selected { outline: 2px solid var(--brand-accent); }
 .swarm-proof { margin-top: 22px; padding: 18px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); }
 .swarm-proof h2 { margin: 0 0 8px; }
+
+.swarm-topology { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px 20px; margin-bottom: 16px; overflow: auto; }
+.swarm-topology h2 { font-size: 16px; margin: 0; }
+.swarm-topology small { font-size: 11px; font-weight: normal; color: var(--muted-foreground); }
+.swarm-topology svg { width: 100%; min-width: 450px; max-height: 520px; display: block; }
+.swarm-edge { fill: none; stroke: var(--muted-foreground); stroke-width: 2; stroke-opacity: .6; }
+.swarm-graph-node { cursor: pointer; }
+.swarm-graph-node circle { fill: var(--accent); stroke: var(--muted-foreground); stroke-width: 2; }
+.swarm-graph-node.ready circle { stroke: var(--success); stroke-width: 4; }
+.swarm-graph-node.failed circle { stroke: #d35c58; stroke-width: 4; }
+.swarm-graph-node.selected circle, .swarm-graph-node:focus circle { stroke: var(--brand-accent); stroke-width: 5; }
+.swarm-graph-node text { fill: var(--foreground); font-size: 15px; font-weight: 700; pointer-events: none; }

@@ -70,3 +70,20 @@ export function mergeMessages(old: readonly SwarmMessageView[], next: readonly S
   for (const m of next) bySeq.set(m.seq, m);
   return [...bySeq.values()].sort((a, b) => a.seq - b.seq);
 }
+
+/** Stable, bounded geometry for a small swarm topology. The API's member IDs are never rendered here. */
+export function graphLayout(members: readonly SwarmMemberView[], width = 900): Array<{ id: string; x: number; y: number; parentId?: string; state: SwarmMemberView["state"] }> {
+  const depths = new Map<number, SwarmMemberView[]>();
+  for (const m of members) depths.set(m.depth, [...(depths.get(m.depth) ?? []), m]);
+  const levels = [...depths.keys()].sort((a, b) => a - b);
+  return levels.flatMap((depth, row) => {
+    const siblings = depths.get(depth)!;
+    return siblings.map((m, index) => ({
+      id: m.id,
+      x: width * (index + 1) / (siblings.length + 1),
+      y: 55 + row * 112,
+      ...(m.parentId ? { parentId: m.parentId } : {}),
+      state: m.state,
+    }));
+  });
+}
