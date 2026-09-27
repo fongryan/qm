@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { spawnSync } from 'node:child_process';
 import { swarmFixture } from './swarm-fixture.ts';
+import { createSwarmMemory } from './swarm-memory-bridge.ts';
 const fixture=await swarmFixture();
 const id=fixture.root.id;
 const pause=(ms:number)=>new Promise(r=>setTimeout(r,ms));
@@ -48,11 +49,11 @@ async function work(){if(begun)return;begun=true;try{
  const workerA=await fixture.workerCaller(first!.id);
  const rootQuestion=(await fixture.service.read(workerA,{after:0}))[0];
  const provenance='Synthetic support policy invented for local fixture by Instinct worker A, not Armalo policy, 2026-09-27';
- const written=findings.map((finding)=>{
-  const result=brain(['remember',finding.fact,'--entity',entity,'--provenance',provenance,'--visibility','private','--json']);
-  if(result.state!=='committed'||!result.id)throw new Error('GBrain write not committed');
-  return {...finding,id:String(result.id),source:provenance};
+ const memory=createSwarmMemory({
+  remember:(fact,entity,source)=>brain(['remember',fact,'--entity',entity,'--provenance',source,'--visibility','private','--json']),
+  recall:(entity)=>brain(['recall',entity,'--json'])
  });
+ const written=memory.write(entity,first!.id,provenance,findings);
  evidence.status='written';evidence.factId=written[0]!.id;evidence.writer=first!.id;evidence.provenance=provenance;evidence.note='Four findings written to local GBrain; awaiting independent worker recall.';
  await fixture.service.send(workerA,{requestId:'worker-a-gbrain-result',replyTo:rootQuestion!.id,text:'Support worker A: drafted refund #1 and billing #3 replies. Refund #1 is held for fixture-human approval; no refund action or customer send. Stored four invented synthetic support rules in local GBrain.',audience:[fixture.root.id],notify:false});
  await pause(2600);
@@ -60,11 +61,7 @@ async function work(){if(begun)return;begun=true;try{
  await fixture.service.sweep();
  await pause(2400);
  const workerB=await fixture.workerCaller(second!.id);
- const recalled=brain(['recall',entity,'--json']);
- for(const item of written){
-  const hit=recalled.facts?.find((entry:any)=>String(entry.id)===item.id&&entry.fact===item.fact&&entry.source===item.source);
-  if(!hit)throw new Error(`GBrain recall did not match fact #${item.id} and its provenance`);
- }
+ const recalled=memory.recall(entity,second!.id,written);
  evidence.status='recalled';evidence.reader=second!.id;evidence.fact=written[0]!.fact;evidence.facts=written.map(({id,fact,topic,tags,source})=>({id,fact,topic,tags,source}));evidence.note='Worker B read all four invented synthetic support rules and used the shipping/VIP workflow in its QM draft. No customer-facing send.';
  const secondQuestion=(await fixture.service.read(workerB,{after:0})).find((m)=>m.senderId===fixture.root.id&&m.audience.includes(second!.id));
  await fixture.service.send(workerB,{requestId:'worker-b-recall-result',replyTo:secondQuestion!.id,text:`Support worker B: independently recalled four invented support rules from local GBrain with matching sources. Draft shipping-delay #2 status update; escalate VIP complaint #4 before any promise or credit. No customer message was sent.`,audience:[fixture.root.id],notify:false});
