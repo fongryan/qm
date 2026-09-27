@@ -1,4 +1,4 @@
-import { html, nothing, render } from "lit";
+import { html, svg, nothing, render } from "lit";
 import { api, withBase } from "./core-bridge";
 import { appState } from "./shell-state";
 import { normalizeSwarm, mergeMessages, graphLayout, type SwarmInspection, type SwarmMessageView } from "./swarm-events";
@@ -60,19 +60,19 @@ function draw(): void {
       <div class="swarm-summary"><strong>${inspect.peers.length} members</strong><span>${messages.length} messages loaded</span><span>${busy ? "Refreshing…" : "Live refresh"}</span></div>
       <section class="swarm-topology" aria-label="Swarm topology">
         <h2>Topology <small>Parent links and current member state</small></h2>
-        <svg viewBox=${`0 0 900 ${graphHeight}`} role="img" aria-label=${`${nodes.length} QM swarm members and parent links`}>
+        ${svg`<svg viewBox=${`0 0 900 ${graphHeight}`} role="img" aria-label=${`${nodes.length} QM swarm members and parent links`}>
           ${nodes.map((node) => {
             const parent = nodes.find((n) => n.id === node.parentId);
-            return parent ? html`<path class="swarm-edge" d=${`M ${parent.x} ${parent.y + 25} L ${node.x} ${node.y - 25}`} />` : nothing;
+            return parent ? svg`<path class="swarm-edge" d=${`M ${parent.x} ${parent.y + 25} L ${node.x} ${node.y - 25}`} />` : nothing;
           })}
-          ${nodes.map((node) => html`<g class="swarm-graph-node ${node.state} ${selectedMember === node.id ? "selected" : ""}"
+          ${nodes.map((node) => svg`<g class="swarm-graph-node ${node.state} ${selectedMember === node.id ? "selected" : ""}"
             role="button" tabindex="0" aria-label=${`Inspect member ${inspect!.peers.findIndex((m) => m.id === node.id) + 1}, ${node.state}`}
             @click=${() => { selectedMember = node.id; draw(); }}
             @keydown=${(e: KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectedMember = node.id; draw(); } }}>
-            <circle cx=${node.x} cy=${node.y} r="26" />
+            <circle cx=${node.x} cy=${node.y} r="26"></circle>
             <text x=${node.x} y=${node.y + 5} text-anchor="middle">${inspect!.peers.findIndex((m) => m.id === node.id) + 1}</text>
           </g>`)}
-        </svg>
+        </svg>`}
       </section>
       <section aria-label="Swarm members" class="swarm-grid">
         ${inspect.peers.map((member, index) => html`<article class="swarm-member state-${member.state} ${selectedMember === member.id ? "selected" : ""}">
