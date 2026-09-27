@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { graphLayout, mergeMessages, normalizeSwarm, type SwarmInspection, type SwarmMessageView } from "../src/swarm-events.ts";
+import { graphLayout, mergeMessages, normalizeSwarm, deliverySignals, type SwarmInspection, type SwarmMessageView } from "../src/swarm-events.ts";
 
 const inspect: SwarmInspection = {
   id: "root", self: { id: "root", depth: 0, state: "ready" },
@@ -31,4 +31,18 @@ test("topology maps parent edge and distinct depth rows without exposing IDs as 
     { x: 450, y: 55, parentId: undefined },
     { x: 450, y: 167, parentId: "root" },
   ]);
+});
+
+test("delivery signals rank failed then pending without calling queued completion", () => {
+  const state = { ...inspect, peers: [
+    { id: "root", depth: 0, state: "ready" as const },
+    { id: "worker", parentId: "root", depth: 1, state: "reserved" as const },
+    { id: "other", parentId: "root", depth: 1, state: "failed" as const },
+  ] };
+  const feed = [{ ...message, notifications: { worker: { state: "pending" as const }, other: { state: "failed" as const } } }];
+  const result = deliverySignals(state, feed);
+  assert.deepEqual([result.failed, result.pending, result.reserved, result.failedMembers], [1, 1, 1, 1]);
+  assert.deepEqual(result.members.map((item) => item.memberId), ["other", "worker"]);
+  assert.equal(deliverySignals(inspect, [message]).members.length, 0);
+  assert.equal(deliverySignals(inspect, [message]).queued, 1);
 });

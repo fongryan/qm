@@ -1,7 +1,7 @@
 import { html, svg, nothing, render } from "lit";
 import { api, withBase } from "./core-bridge";
 import { appState } from "./shell-state";
-import { normalizeSwarm, mergeMessages, graphLayout, type SwarmInspection, type SwarmMessageView } from "./swarm-events";
+import { normalizeSwarm, mergeMessages, graphLayout, deliverySignals, type SwarmInspection, type SwarmMessageView } from "./swarm-events";
 import { errMessage } from "../../chassis/src/errors";
 
 let host: HTMLElement | null = null;
@@ -33,6 +33,7 @@ function draw(): void {
   }
   const events = inspect ? normalizeSwarm(inspect, messages) : [];
   const nodes = inspect ? graphLayout(inspect.peers) : [];
+  const signals = inspect ? deliverySignals(inspect, messages) : null;
   const graphHeight = Math.max(120, ...nodes.map((node) => node.y + 55));
   render(html`
     <header class="swarm-head">
@@ -58,6 +59,13 @@ function draw(): void {
     </header>
     ${inspect ? html`
       <div class="swarm-summary"><strong>${inspect.peers.length} members</strong><span>${messages.length} messages loaded</span><span>${busy ? "Refreshing…" : "Live refresh"}</span></div>
+      <section class="swarm-delivery" aria-label="Delivery signals">
+        <h2>Where to look next <small>QM delivery state, not a critical-path estimate</small></h2>
+        <p>${signals!.failedMembers} failed members · ${signals!.reserved} reserved members · ${signals!.failed} failed notifications · ${signals!.pending} pending · ${signals!.queued} queued</p>
+        ${signals!.members.slice(0, 5).map((entry) => html`<p>Member ${inspect!.peers.findIndex((peer) => peer.id === entry.memberId) + 1}: ${entry.failed} failed, ${entry.pending} pending deliveries</p>`)}
+        ${signals!.failed || signals!.pending || signals!.failedMembers || signals!.reserved ? nothing : html`<p>No failed or pending delivery signals in the loaded feed; queued work may still be waiting.</p>`}
+        <small>Queued means enqueued, not complete. No run completion, idle time, dependency graph, or bottleneck duration is available from this API.</small>
+      </section>
       <section class="swarm-topology" aria-label="Swarm topology">
         <h2>Topology <small>Parent links and current member state</small></h2>
         ${svg`<svg viewBox=${`0 0 900 ${graphHeight}`} role="img" aria-label=${`${nodes.length} QM swarm members and parent links`}>

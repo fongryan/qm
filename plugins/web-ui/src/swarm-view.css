@@ -51,3 +51,8 @@
 .swarm-graph-node.failed circle { stroke: #d35c58; stroke-width: 4; }
 .swarm-graph-node.selected circle, .swarm-graph-node:focus circle { stroke: var(--brand-accent); stroke-width: 5; }
 .swarm-graph-node text { fill: var(--foreground); font-size: 15px; font-weight: 700; pointer-events: none; }
+
+.swarm-delivery { margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 14px 18px; }
+.swarm-delivery h2 { display: flex; gap: 8px; align-items: baseline; font-size: 17px; margin: 0 0 8px; }
+.swarm-delivery h2 small, .swarm-delivery > small { color: var(--muted-foreground); font-size: 11px; font-weight: normal; }
+.swarm-delivery p { margin: 5px 0; font-size: 13px; }

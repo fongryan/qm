@@ -87,3 +87,25 @@ export function graphLayout(members: readonly SwarmMemberView[], width = 900): A
     }));
   });
 }
+
+/** Current delivery signals only. Queued means enqueued, not finished or blocked. */
+export function deliverySignals(inspect: SwarmInspection, messages: readonly SwarmMessageView[]) {
+  const byMember = new Map(inspect.peers.map((peer) => [peer.id, { memberId: peer.id, pending: 0, failed: 0, queued: 0 }]));
+  for (const message of messages) {
+    for (const [recipient, notification] of Object.entries(message.notifications)) {
+      const entry = byMember.get(recipient);
+      if (entry) entry[notification.state]++;
+    }
+  }
+  const members = [...byMember.values()]
+    .filter((entry) => entry.pending || entry.failed)
+    .sort((a, b) => b.failed - a.failed || b.pending - a.pending || a.memberId.localeCompare(b.memberId));
+  return {
+    members,
+    pending: members.reduce((sum, entry) => sum + entry.pending, 0),
+    failed: members.reduce((sum, entry) => sum + entry.failed, 0),
+    queued: [...byMember.values()].reduce((sum, entry) => sum + entry.queued, 0),
+    reserved: inspect.peers.filter((peer) => peer.state === "reserved").length,
+    failedMembers: inspect.peers.filter((peer) => peer.state === "failed").length,
+  };
+}

@@ -59,6 +59,8 @@ session links** checkbox exposes private details only in the current browser
 view; it does not change sharing permissions. A member session link appears
 only when QM supplies one and the checkbox is on.
 
+The **Where to look next** panel ranks failed and pending QM notification signals and counts reserved or failed members. Queued means enqueued, not completed. The API cannot prove worker completion, idleness, loop detection, duration, or a critical path; this panel makes none of those claims.
+
 The **Member evidence** panel is a read-only summary, not a generated Task
 Proof Pack. Member state is a snapshot, not a timestamped history. Message
 reads are bounded to 256 entries per refresh, so a busy swarm can omit earlier
