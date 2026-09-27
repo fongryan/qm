@@ -14,6 +14,26 @@ const task='Synthetic support queue: refund #1, shipping delay #2, billing error
 const entity=`projects/qm-swarm-demo-${id.slice(0,8)}`;
 let stalled:{id:string;dispatchedAt:number;messageId:string;approvalAt?:number;approvalMessageId?:string}|null=null;
 const STALL_THRESHOLD_MS=20_000;
+const ticketKinds=['refund','shipping delay','billing error','VIP complaint'] as const;
+const queue={source:'local synthetic ticket fixture' as const,total:24,dispatched:0,drafted:0,pending:24,workerIds:[] as string[],events:[] as Array<{ticket:number;worker:string;messageId:string}>};
+async function drainQueue(){
+ const assignments=Array.from({length:5},(_,i)=>Array.from({length:i===4?4:5},(_,j)=>i*5+j+1));
+ const workers=await fixture.service.spawn(fixture.caller,{requestId:'scaled-support-workers',text:'Draft synthetic support tickets only. No customer sends, refunds or payments.',contexts:assignments.map((tickets,i)=>({role:`ticket drafting fixture ${i+1}`,tickets})),count:5});
+ await fixture.service.sweep();
+ queue.workerIds=workers.map((w)=>w.id);
+ for(let i=0;i<workers.length;i++){
+  const worker=await fixture.workerCaller(workers[i]!.id);
+  for(const ticket of assignments[i]!){
+   const kind=ticketKinds[(ticket-1)%4]!;
+   const dispatch=await fixture.service.send(fixture.caller,{requestId:`ticket-${ticket}-dispatch`,text:`Synthetic ${kind} ticket #${ticket}. Draft only, do not send to a customer or transact.`,audience:[workers[i]!.id],notify:false});
+   queue.dispatched++;queue.pending=queue.total-queue.drafted;
+   await pause(900);
+   const msg=await fixture.service.send(worker,{requestId:`ticket-${ticket}-draft`,replyTo:dispatch.id,text:`Fixture worker draft for synthetic ${kind} #${ticket}: ${kind==='refund'?'Hold for human review, no refund action.':kind==='billing error'?'Verify account without collecting payment data.':kind==='VIP complaint'?'Escalate without a promise or credit.':'Prepare status update without customer send.'} No real action.`,audience:[fixture.root.id],notify:false});
+   queue.drafted++;queue.pending=queue.total-queue.drafted;queue.events.push({ticket,worker:workers[i]!.id,messageId:msg.id});
+  }
+ }
+}
+
 const findings=[
  {fact:'Synthetic support policy: refund requests require a human approval before any refund action.',topic:'approval',tags:['human','approval']},
  {fact:'Synthetic support policy: billing errors require account verification and no card numbers in agent messages.',topic:'approval',tags:['human','privacy']},
@@ -57,8 +77,10 @@ async function work(){if(begun)return;begun=true;try{
  const dispatched=(await fixture.service.read(fixture.caller,{after:0})).findLast((m)=>m.senderId===fixture.root.id&&m.audience.includes(third!.id));
  if(!dispatched)throw new Error('No third-worker QM dispatch found');
  stalled={id:third!.id,dispatchedAt:Date.now(),messageId:dispatched.id};
+ void drainQueue().catch((e)=>console.error('queue error',e));
  }catch(e){evidence.status='failed';evidence.note=String(e);console.error('work error',e)}}
 createServer(async(req,res)=>{res.setHeader('access-control-allow-origin','*');res.setHeader('content-type','application/json');const u=new URL(req.url??'/','http://localhost');if(u.pathname==='/start'){void work();res.end(JSON.stringify({started:true}));return}
+ if(u.pathname==='/queue-demo'){res.end(JSON.stringify(queue));return}
  if(u.pathname==='/approve-demo'){
   if(!stalled){res.statusCode=409;res.end(JSON.stringify({error:'approval gate not ready'}));return}
   if(stalled.approvalAt){res.end(JSON.stringify({approvedAt:stalled.approvalAt,messageId:stalled.approvalMessageId}));return}

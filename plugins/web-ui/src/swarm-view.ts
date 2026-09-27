@@ -21,6 +21,9 @@ let generation = 0;
 let showSynthetic = false;
 let memoryReceipt: MemoryReceipt | null = null;
 let stallReceipt: StallReceipt | null = null;
+export interface QueueReceipt {source:"local synthetic ticket fixture";total:number;dispatched:number;drafted:number;pending:number;workerIds:string[];events:Array<{ticket:number;worker:string;messageId:string}>}
+let queueReceipt:QueueReceipt|null=null;
+export function setSwarmQueueEvidence(receipt:QueueReceipt|null):void {queueReceipt=receipt;draw();}
 export function setSwarmStallEvidence(receipt: StallReceipt | null): void { stallReceipt = receipt; draw(); }
 /** A caller may attach a separately verified memory receipt; QM itself has no memory endpoint. */
 export function setSwarmMemoryEvidence(receipt: MemoryReceipt | null): void { memoryReceipt = receipt; draw(); }
@@ -71,7 +74,8 @@ function draw(): void {
     </header>
     ${showSynthetic ? html`<div id="scale-host"></div>` : nothing}
     ${inspect ? html`
-      <div class="swarm-summary"><span class="swarm-live-dot"></span><strong>QM SESSION LIVE</strong><span>${inspect.peers.length} agents</span><span>${messages.length} messages</span><span>${busy ? "Refreshing…" : "Refreshes every 3s"}</span></div>
+      <div class="swarm-summary"><span class="swarm-live-dot"></span><strong>QM SESSION LIVE</strong><span>${inspect.peers.length} agents</span><span>${messages.length} messages</span>${queueReceipt ? html`<span>${queueReceipt.workerIds.length+3} fixture workers · ${queueReceipt.drafted}/${queueReceipt.total} synthetic drafts</span>` : nothing}<span>${busy ? "Refreshing…" : "Refreshes every 3s"}</span></div>
+      ${queueReceipt && queueReceipt.workerIds.length ? html`<section class="queue-evidence" aria-label="Synthetic support ticket progress"><div><strong>24-TICKET FIXTURE QUEUE</strong><span>${queueReceipt.drafted} QM draft replies / ${queueReceipt.total} synthetic tickets</span><small>8 fixture workers · no model-driven QM turns, customer sends or refunds</small></div><div class="queue-track"><div style=${`width:${Math.round(queueReceipt.drafted/queueReceipt.total*100)}%`}></div></div><span>${queueReceipt.pending} awaiting fixture draft · ${queueReceipt.dispatched} dispatched through QM</span></section>` : nothing}
       <section class="swarm-mission" aria-label="Swarm mission control">
         <div class="mission-meta"><span>LIVE TOPOLOGY</span><span>${inspect.peers.length} AGENTS · ${signals!.queued} QUEUED · ${signals!.failed} FAILED</span></div>
         ${fixtureHumanMessage ? html`<div class="human-fixture-badge"><span class="human-avatar">H</span><div><strong>HUMAN MESSAGE / FIXTURE-SENT</strong><small>Synthetic refund draft approved in QM #${fixtureHumanMessage.seq}. Not Ryan and no real refund.</small></div></div>` : nothing}
@@ -125,7 +129,7 @@ function draw(): void {
         <p class="memory-fact">${revealPrivateText ? memoryReceipt.fact : "Fact text hidden for demo privacy"}</p>
         <small>Source: ${revealPrivateText ? memoryReceipt.provenance : "local, source-bound GBrain receipt"}. This receipt comes from the local demo, not the QM inspect API. No hosted or Aside integration is implied.</small>
       </section>` : nothing}
-      <section class="swarm-timeline" aria-label="Swarm activity"><h2>Support queue signal log <small>Four synthetic tickets · QM source messages, no customer sends</small></h2>
+      <section class="swarm-timeline" aria-label="Swarm activity"><h2>Support queue signal log <small>${queueReceipt?.total ?? 4} synthetic tickets · QM source messages, no customer sends</small></h2>
         ${events.filter((e) => e.kind !== "member").length ? events.filter((e) => e.kind !== "member").map((event) => event.kind === "message"
           ? html`<article class="swarm-activity"><span class="swarm-dot"></span><div><div class="swarm-activity-top"><strong>${event.author === "human" ? "Human" : "Agent"} ${inspect!.peers.findIndex((m) => m.id === event.memberId) + 1 || "?"}</strong><time>${new Date(event.at).toLocaleTimeString()}</time></div><p>${revealPrivateText ? event.text : "Message text hidden for demo privacy"}</p><small>#${event.seq} · to ${event.audience.length} member${event.audience.length === 1 ? "" : "s"}${event.replyTo ? html` · replies to #${messages.find((m) => m.id === event.replyTo)?.seq ?? "earlier message"}` : nothing}</small></div></article>`
           : html`<article class="swarm-activity notification"><span class="swarm-dot"></span><div><strong>Member ${inspect!.peers.findIndex((m) => m.id === event.memberId) + 1 || "?"}</strong> notification ${event.state} for #${event.messageSeq}${event.runId ? html` · run ${revealPrivateText ? html`<code>${event.runId}</code>` : "recorded"}` : nothing}</div></article>`)
