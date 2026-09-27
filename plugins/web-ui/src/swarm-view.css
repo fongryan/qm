@@ -32,7 +32,7 @@
 .swarm-empty, .swarm-disclaimer { color: var(--muted-foreground); padding: 24px 0; }
 .swarm-disclaimer { font-size: 12px; }
 
-.swarm-privacy { display: inline-flex; gap: 8px; align-items: center; color: var(--muted-foreground); font-size: 12px; cursor: pointer; }
+.swarm-privacy { display: flex; width: fit-content; white-space: nowrap; margin: 12px 0; gap: 8px; align-items: center; color: var(--muted-foreground); font-size: 12px; cursor: pointer; }
 .swarm-node { display: flex; align-items: center; justify-content: space-between; width: 100%; border: 0; padding: 0; background: none; color: var(--markdown-link); cursor: pointer; font-size: 12px; }
 .swarm-node-number { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--foreground); display: inline-grid; place-items: center; font-weight: 700; }
 .swarm-member.selected { outline: 2px solid var(--brand-accent); }
