@@ -413,3 +413,26 @@ No Aside task, hosted GBrain workspace, QM worker model, or AoA runtime is
 running in this demo. Aside's local-first browser memory could feed the same
 brain later only through an explicitly consented and redacted handoff. This
 is a design path, not a built integration.
+
+### Experimental memory grouping
+
+After Ryan relayed a suggestion from Memorable AI's team about cross-entropy
+and hierarchical memory, Swarm View added a small **information-gain grouping
+prototype** (`swarm-memory-hierarchy.ts`). It takes only already verified
+recalled facts with explicit source, topic, and tags; it chooses the tag that
+maximally reduces topic-label entropy, recursively to depth four. This is not a
+cross-entropy training objective or a Memorable AI implementation. The current
+local demonstration has **one** verified GBrain fact, so the UI shows one leaf
+and explicitly says no split is justified. It does not invent a tree or infer
+tags from hidden data. No Memorable API or service was used.
+
+### Measured non-reply in the local demo
+
+The browser-only fixture may provide a separate `stall-demo` receipt after
+sending a QM task to a third member. Its own clock records dispatch time and
+checks for a reply linked to that dispatch. Only after 20 real elapsed seconds
+with no linked reply does Swarm View show "no reply for Ns (threshold 20s)".
+The member is deliberately not driven in this fixture. This is not proof that
+a production agent is stuck, looping, idle, or failing: QM inspect does not
+expose that run-health evidence. The ordinary viewer has no timer endpoint and
+never draws this alert without a verified fixture receipt.

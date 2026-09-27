@@ -3,6 +3,8 @@ import { api, withBase } from "./core-bridge";
 import { appState } from "./shell-state";
 import { normalizeSwarm, mergeMessages, graphLayout, deliverySignals, type SwarmInspection, type SwarmMessageView } from "./swarm-events";
 import { verifiedMemoryLink, type MemoryReceipt } from "./swarm-memory-evidence";
+import { groupVerifiedFacts, type LearnedFact, type MemoryTree } from "./swarm-memory-hierarchy";
+import { measuredNonReply, type StallReceipt } from "./swarm-stall-evidence";
 import { renderSyntheticScale } from "./swarm-scale-preview";
 import { errMessage } from "../../chassis/src/errors";
 
@@ -18,6 +20,8 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 let generation = 0;
 let showSynthetic = false;
 let memoryReceipt: MemoryReceipt | null = null;
+let stallReceipt: StallReceipt | null = null;
+export function setSwarmStallEvidence(receipt: StallReceipt | null): void { stallReceipt = receipt; draw(); }
 /** A caller may attach a separately verified memory receipt; QM itself has no memory endpoint. */
 export function setSwarmMemoryEvidence(receipt: MemoryReceipt | null): void { memoryReceipt = receipt; draw(); }
 
@@ -40,6 +44,7 @@ function draw(): void {
   const events = inspect ? normalizeSwarm(inspect, messages) : [];
   const nodes = inspect ? graphLayout(inspect.peers) : [];
   const signals = inspect ? deliverySignals(inspect, messages) : null;
+  const nonReply = inspect ? measuredNonReply(stallReceipt, inspect.peers.map((m)=>m.id)) : null;
   const memoryLink = inspect ? verifiedMemoryLink(memoryReceipt, inspect.peers.map((m) => m.id)) : null;
   const graphHeight = Math.max(120, ...nodes.map((node) => node.y + 55));
   render(html`
@@ -68,7 +73,7 @@ function draw(): void {
       <div class="swarm-summary"><span class="swarm-live-dot"></span><strong>QM SESSION LIVE</strong><span>${inspect.peers.length} agents</span><span>${messages.length} messages</span><span>${busy ? "Refreshing…" : "Refreshes every 3s"}</span></div>
       <section class="swarm-mission" aria-label="Swarm mission control">
         <div class="mission-meta"><span>LIVE TOPOLOGY</span><span>${inspect.peers.length} AGENTS · ${signals!.queued} QUEUED · ${signals!.failed} FAILED</span></div>
-        ${signals!.failed || signals!.pending || signals!.failedMembers || signals!.reserved ? html`<div class="mission-alert"><strong>WHERE TO LOOK NEXT</strong><span>${signals!.failed} failed · ${signals!.pending} pending deliveries · ${signals!.failedMembers} failed agents</span><small>Delivery signals only, not a critical path</small></div>` : html`<div class="mission-alert quiet"><strong>NO FAILED DELIVERY SIGNALS</strong><span>${signals!.queued} queued, not yet confirmed complete</span></div>`}
+        ${nonReply ? html`<div class="mission-alert stalled"><strong>FOLLOW-UP NEEDS ATTENTION</strong><span>Worker ${inspect.peers.findIndex((m)=>m.id===nonReply.memberId)+1}: no reply for ${nonReply.seconds}s (threshold ${nonReply.thresholdSeconds}s)</span><small>Measured local fixture dispatch, not a QM run-health signal</small></div>` : signals!.failed || signals!.pending || signals!.failedMembers || signals!.reserved ? html`<div class="mission-alert"><strong>WHERE TO LOOK NEXT</strong><span>${signals!.failed} failed · ${signals!.pending} pending deliveries · ${signals!.failedMembers} failed agents</span><small>Delivery signals only, not a critical path</small></div>` : html`<div class="mission-alert quiet"><strong>NO FAILED DELIVERY SIGNALS</strong><span>${signals!.queued} queued, not yet confirmed complete</span></div>`}
         ${selectedMember ? html`<aside class="mission-drawer" aria-label="Selected member evidence">
           <button class="drawer-close" @click=${() => { selectedMember=""; draw(); }} aria-label="Close evidence">×</button>
           <span class="drawer-eyebrow">MEMBER EVIDENCE / ${inspect.peers.findIndex((m) => m.id === selectedMember)+1}</span>
@@ -97,7 +102,7 @@ function draw(): void {
             const volume = messages.filter((m) => m.senderId === node.id).length;
             const label = member.id === inspect!.self.id ? "ORCHESTRATOR" : `WORKER ${String(number).padStart(2,"0")}`;
             const trouble = signals!.members.some((m) => m.memberId === node.id);
-            return svg`<g class="mission-agent ${node.state} ${trouble ? "attention" : ""} ${selectedMember === node.id ? "selected" : ""}"
+            return svg`<g class="mission-agent ${node.state} ${trouble || nonReply?.memberId === node.id ? "attention" : ""} ${selectedMember === node.id ? "selected" : ""}"
                 role="button" tabindex="0" aria-label=${`${label}, ${node.state}, ${volume} messages`} @click=${() => { selectedMember=node.id; draw(); }}
                 @keydown=${(e: KeyboardEvent) => { if(e.key === "Enter" || e.key === " "){e.preventDefault(); selectedMember=node.id; draw();} }}>
               <circle class="agent-aura" cx=${node.x} cy=${node.y + 85} r=${38 + Math.min(14,volume*4)} />
@@ -113,7 +118,8 @@ function draw(): void {
       ${memoryLink && memoryReceipt ? html`<section class="memory-evidence" aria-label="GBrain memory evidence">
         <span class="memory-kicker">GBRAIN / LOCAL PGLITE · VERIFIED READBACK</span>
         <h2>What this swarm learned</h2>
-        <p>Worker ${inspect.peers.findIndex((m)=>m.id===memoryLink.from)+1} wrote fact #${memoryLink.factId}; worker ${inspect.peers.findIndex((m)=>m.id===memoryLink.to)+1} recalled the exact fact with its source before replying.</p>
+        <div class="memory-hierarchy"><strong>Information-gain grouping prototype</strong><ul>${renderMemoryTree(groupVerifiedFacts(memoryReceipt.facts?.map((fact):LearnedFact=>({id:fact.id,topic:fact.topic,tags:fact.tags,source:fact.source,text:fact.fact})) ?? [{id:memoryLink.factId,topic:"unclassified",tags:[],source:memoryReceipt.provenance!,text:memoryReceipt.fact!}]))}</ul><small>${memoryReceipt.facts && memoryReceipt.facts.length > 1 ? "Groups use source-reviewed topic labels and tags, not inferred hidden content." : "One verified recall, so no topic split is justified. Future splits require multiple source-labeled facts and tags."}</small></div>
+        <p>Worker ${inspect.peers.findIndex((m)=>m.id===memoryLink.from)+1} wrote ${memoryReceipt.facts?.length ?? 1} source-bound fact${memoryReceipt.facts?.length===1?"":"s"}; worker ${inspect.peers.findIndex((m)=>m.id===memoryLink.to)+1} recalled ${memoryReceipt.facts?.length ?? 1} exact fact${memoryReceipt.facts?.length===1?"":"s"} before replying.</p>
         <p class="memory-fact">${revealPrivateText ? memoryReceipt.fact : "Fact text hidden for demo privacy"}</p>
         <small>Source: ${revealPrivateText ? memoryReceipt.provenance : "local, source-bound GBrain receipt"}. This receipt comes from the local demo, not the QM inspect API. No hosted or Aside integration is implied.</small>
       </section>` : nothing}
@@ -127,6 +133,11 @@ function draw(): void {
     ` : html`<div class="swarm-empty">${busy ? "Loading…" : "Enter a session ID to inspect its swarm."}</div>`}
   `, host);
   if (showSynthetic) { const scaleHost = host.querySelector<HTMLElement>("#scale-host"); if (scaleHost) renderSyntheticScale(scaleHost); }
+}
+
+function renderMemoryTree(tree: MemoryTree): ReturnType<typeof html> {
+  if (tree.kind === "leaf") return html`<li>${tree.facts.length} verified recalled fact${tree.facts.length===1?"":"s"}${tree.facts.length===1?html` · #${tree.facts[0]!.id}`:nothing}</li>`;
+  return html`<li>${tree.tag} <small>(information gain ${tree.gain.toFixed(2)} bits)</small><ul><li>matches<ul>${renderMemoryTree(tree.matches)}</ul></li><li>other<ul>${renderMemoryTree(tree.other)}</ul></li></ul></li>`;
 }
 
 async function poll(version: number): Promise<void> {

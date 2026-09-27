@@ -8,6 +8,7 @@ export interface MemoryReceipt {
   reader?: string;
   provenance?: string;
   note: string;
+  facts?: Array<{id:string;fact:string;topic:string;tags:string[];source:string}>;
 }
 export function verifiedMemoryLink(receipt: MemoryReceipt | null, memberIds: readonly string[]): {from:string;to:string;factId:string}|null {
   if (!receipt || receipt.status !== "recalled" || !receipt.factId || !receipt.fact || !receipt.provenance || !receipt.writer || !receipt.reader) return null;

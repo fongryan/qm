@@ -170,3 +170,12 @@
 .memory-evidence h2 {margin:8px 0;font-size:18px;}
 .memory-evidence p {font-size:13px;}.memory-evidence .memory-fact{color:#c8d2dd;}
 .memory-evidence small {font-size:11px;color:#aab1c7;}
+.memory-hierarchy {margin:12px 0;padding:10px 14px;border:1px solid #443c66;border-radius:7px;background:#171b30;color:#c9b5e7;font-size:12px;}
+.memory-hierarchy ul {margin:7px 0;padding-left:20px;}.memory-hierarchy li {margin:4px 0;}
+
+.mission-alert.stalled {border-color:#e46a75;background:#4b222edb;box-shadow:0 0 28px #d84d4666;animation:stall-breathe 2s ease-in-out infinite;}
+@keyframes stall-breathe {50%{box-shadow:0 0 48px #ed767991}}
+@media(prefers-reduced-motion:reduce){.mission-alert.stalled{animation:none}}
+.mission-alert.stalled {width:300px;line-height:1.35;}
+.mission-alert.stalled span {font-size:13px;font-weight:700;}
+.mission-alert.stalled small {color:#e9bfc7;line-height:1.35;}
