@@ -1,5 +1,6 @@
 import "dockview-core/dist/styles/dockview.css";
 import "./shell.css";
+import "./swarm-view.css";
 import { bootSafely, closeUserMenu } from "./shell";
 import { registerChatSearchHotkey } from "./search";
 import { closeFormMenus } from "./ui";

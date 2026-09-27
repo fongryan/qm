@@ -24,6 +24,7 @@ import {
   Repeat,
   Rocket,
   Search,
+  Network,
   Settings,
   ShieldUser,
   Webhook,
@@ -84,6 +85,7 @@ import { openCronById, renderCronsPage, resetActiveCron, routeCronsHistory } fro
 import { renderLoopsPage, resetActiveLoop } from "./loops";
 import { openWebhookById, renderWebhooksPage, resetActiveWebhook, routeWebhooksHistory } from "./webhooks";
 import { renderFiles } from "./files";
+import { renderSwarmView, closeSwarmView } from "./swarm-view";
 import { setScopedSession } from "./session-scope";
 import { openChatSearch } from "./search";
 import { closeBrowse, openBrowse } from "./browse";
@@ -226,6 +228,7 @@ const ICON = {
   skills: Box,
   home: House,
   browse: LayoutGrid,
+  swarms: Network,
 };
 
 export async function signOut(): Promise<void> {
@@ -626,6 +629,7 @@ export function renderSidebarTop(): void {
     html`
       <nav class="nav quick-nav" @click=${onNavClick}>
         ${navRow("chats", ICON.home, "Home")}
+        ${navRow("swarms", ICON.swarms, "Swarms")}
         ${can("inbox") ? html`${inboxNavRow()} ${navRow("calendar", ICON.calendar, "Calendar")}` : nothing}
         ${actionRow(Search, "Search", () => {
           hideTooltip();
@@ -687,6 +691,7 @@ export function switchView(v: View): void {
     refreshActiveView(v);
     return;
   }
+  if (appState.currentView === "swarms") closeSwarmView();
   appState.currentView = v;
   capturePageview(v);
   appState.viewRenderSeq++;
@@ -716,6 +721,9 @@ export function switchView(v: View): void {
       } else showChats();
       break;
     }
+    case "swarms":
+      renderSwarmView();
+      break;
     case "inbox":
       void renderInbox();
       break;
@@ -782,6 +790,9 @@ function refreshActiveView(v: View): void {
     case "chats":
       if (splitState.active) void refreshSessions({ silent: true, refreshContexts: true });
       else void renderChatsPage();
+      break;
+    case "swarms":
+      renderSwarmView();
       break;
     case "inbox":
       void renderInbox();

@@ -23,6 +23,7 @@ test("chats view with no session yields the bare root", () => {
 test("non-chat views are path-addressed regardless of any session", () => {
   assert.equal(deepLinkPath("", "webhooks", null), "/webhooks");
   assert.equal(deepLinkPath("", "files", "abc"), "/files");
+  assert.equal(deepLinkPath("", "swarms", null), "/swarms");
   assert.equal(deepLinkPath("", "keychain", null), "/keychain");
   assert.equal(deepLinkPath("", "deploys", null), "/apps");
 });

@@ -1094,6 +1094,27 @@ async function serveFileContent(c: WebCtx, playground = false): Promise<unknown>
 const apiRoutes: readonly WebRoute[] = [
   {
     method: "GET",
+    path: "/api/sessions/:id/swarm",
+    handle: async ({ res, url, user, params }) => {
+      const id = params.id!;
+      // A cookie alone is not a core actor. Forward the verified portal identity;
+      // the core checks session visibility and swarm membership again.
+      if (!portalTokenStore.getStore()) return json(res, 401, { error: "portal identity required" });
+      const query = new URLSearchParams();
+      if (url.searchParams.get("read") === "1") {
+        query.set("read", "1");
+        const after = url.searchParams.get("after") ?? "0";
+        if (!/^(0|[1-9]\d*)$/.test(after)) return json(res, 400, { error: "invalid cursor" });
+        query.set("after", after);
+      }
+      const path = `/v1/sessions/${encodeURIComponent(id)}/swarm${query.size ? `?${query}` : ""}`;
+      const visible = await coreFetch("GET", `/v1/sessions/${encodeURIComponent(id)}?viewer=${encodeURIComponent(user)}&tailTurns=1`);
+      if (visible.status !== 200) return json(res, 404, { error: "session not found" });
+      return relay(res, await coreFetch("GET", path));
+    },
+  },
+  {
+    method: "GET",
     path: "/api/files/by-name/content",
     handle: async (c) => {
       const { res, url, user } = c;

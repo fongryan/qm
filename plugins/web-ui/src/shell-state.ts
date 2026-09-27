@@ -22,6 +22,7 @@ export interface Me {
 
 const VIEWS = [
   "chats",
+  "swarms",
   "inbox",
   "calendar",
   "contexts",
