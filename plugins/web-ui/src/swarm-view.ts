@@ -128,7 +128,7 @@ async function poll(version: number): Promise<void> {
     error = "";
   } catch (e) {
     if (version !== generation) return;
-    error = `Could not inspect this swarm: ${errMessage(e)}`;
+    error = revealPrivateText ? `Could not inspect this swarm: ${errMessage(e)}` : "Could not inspect this swarm. Check access and session ID.";
   } finally {
     if (version === generation) {
       busy = false;
