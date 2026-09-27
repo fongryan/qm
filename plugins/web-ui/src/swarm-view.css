@@ -56,3 +56,110 @@
 .swarm-delivery h2 { display: flex; gap: 8px; align-items: baseline; font-size: 17px; margin: 0 0 8px; }
 .swarm-delivery h2 small, .swarm-delivery > small { color: var(--muted-foreground); font-size: 11px; font-weight: normal; }
 .swarm-delivery p { margin: 5px 0; font-size: 13px; }
+.scale-toggle { margin-top: 12px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.scale-preview { margin: 20px 0; padding: 22px; border: 2px solid #b24747; background: #172036; border-radius: 14px; }
+.scale-preview .scale-badge { display: inline-block; background: #9f3030; padding: 9px 12px; color: white; border-radius: 6px; font-weight: bold; font-size: 12px; }
+.scale-preview h2 { font-size: 22px; margin: 16px 0 6px; }
+.scale-preview small, .scale-preview h2 small { color: #b7c4d6; font-size: 11px; font-weight: normal; }
+.scale-preview .scale-alert { padding: 12px; border-radius: 8px; background: #4d292e; color: #fff; }
+.scale-map { display: block; width: 100%; max-height: 460px; margin: 12px auto; }
+.scale-cluster { cursor: pointer; }
+.scale-cluster text { pointer-events: none; }
+.scale-cluster.is-alert circle { animation: scale-pulse 1.5s ease-in-out infinite; }
+@keyframes scale-pulse { 50% { stroke-width: 8px; stroke: #ffc2a5; } }
+@media (prefers-reduced-motion: reduce) { .scale-cluster.is-alert circle { animation: none; } }
+.scale-detail { margin-top: 16px; padding: 16px; border: 1px solid #6680a8; border-radius: 10px; }
+.scale-detail button { padding: 8px 12px; cursor: pointer; }
+.scale-detail canvas { display: block; width: 100%; max-width: 900px; background: #202c42; }
+/* Mission-control surface. The browser host may not supply the full shell tokens. */
+.swarm-view { max-width:none; width:100%; margin:0; padding:0 26px 60px; background:#0b111c; color:#e8eef7; }
+.swarm-head { min-height:72px; display:flex; gap:18px; align-items:center; border-color:#283345; padding:8px 4px; flex-wrap:wrap; }
+.swarm-eyebrow { color:#69b7ff; white-space:nowrap; }
+.swarm-head h1 { font-size:20px; letter-spacing:-.035em; margin:0 10px 0 0; white-space:nowrap; }
+.swarm-head form { margin:0; gap:8px; }
+.swarm-head form label { font-size:10px; letter-spacing:.16em; color:#8798ad; }
+.swarm-head input { min-width:260px; width:260px; padding:8px 10px; font-size:12px; background:#111b29; border-color:#2b3a4e; }
+.swarm-head form button { padding:9px 14px; background:#2b6ed9; }
+.swarm-privacy { margin:0 0 0 auto; font-size:11px; }
+.swarm-privacy input { min-width:0; }
+.scale-toggle { margin:0; padding:8px 11px; font-size:11px; border-color:#364458; background:#172236; }
+.swarm-summary { padding:12px 4px; gap:15px; font-size:11px; letter-spacing:.04em; }
+.swarm-summary strong { color:#77dcb5; font-size:10px; letter-spacing:.15em; }
+.swarm-live-dot { width:7px; height:7px; background:#49d69e; border-radius:50%; box-shadow:0 0 12px #49d69e; margin-right:-8px; }
+.swarm-mission { position:relative; min-height:calc(75vh - 120px); height:min(78vh,800px); overflow:hidden; border:1px solid #26384d; border-radius:18px; background:radial-gradient(ellipse at 52% 44%,#162a40 0%,#0b1727 43%,#0a1220 79%); box-shadow:inset 0 0 90px #06101dbb; }
+.swarm-mission:before { content:""; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(#63809c0b 1px,transparent 1px),linear-gradient(90deg,#63809c0b 1px,transparent 1px); background-size:34px 34px; }
+.mission-meta { position:absolute; top:25px; left:28px; right:28px; display:flex; justify-content:space-between; color:#8ba8c4; font-size:10px; letter-spacing:.18em; z-index:2; }
+.mission-alert { position:absolute; top:66px; right:28px; z-index:2; width:220px; display:grid; gap:5px; padding:13px 15px; border:1px solid #9c4c57; background:#3c202bdc; border-radius:10px; box-shadow:0 14px 30px #0005; }
+.mission-alert.quiet { border-color:#2a6e67; background:#143237cc; }
+.mission-alert strong { font-size:10px; letter-spacing:.13em; color:#ffb5b7; }
+.mission-alert.quiet strong { color:#71dfbc; }
+.mission-alert span { font-size:12px; }
+.mission-alert small { color:#d1aeb8; font-size:10px; }
+.mission-graph { width:100%; height:100%; display:block; position:relative; }
+.mission-link { fill:none; stroke:#53708b; stroke-width:2.2; stroke-opacity:.85; }
+.mission-agent { cursor:pointer; }
+.mission-agent .agent-aura { fill:#30d7aa1b; stroke:#45d4a560; stroke-width:1; }
+.mission-agent .agent-core { fill:#103b3b; stroke:#4de0b2; stroke-width:2.5; filter:drop-shadow(0 0 12px #2edda488); }
+.mission-agent.reserved .agent-aura { fill:#ffb64c22; stroke:#ffbc71; }
+.mission-agent.reserved .agent-core { fill:#624323; stroke:#ffbe65; filter:drop-shadow(0 0 12px #f9b854aa); }
+.mission-agent.failed .agent-aura,.mission-agent.attention .agent-aura { fill:#d44e5430; stroke:#f27078; animation:mission-pulse 1.5s ease-in-out infinite; }
+.mission-agent.failed .agent-core,.mission-agent.attention .agent-core { fill:#653237; stroke:#fa8b93; filter:drop-shadow(0 0 14px #f26a76aa); }
+.mission-agent.selected .agent-aura { stroke:#fff; stroke-width:3; }
+.mission-agent text { fill:#eaf9f4; pointer-events:none; font-family:ui-monospace,monospace; }
+.mission-agent .agent-number { font-size:17px; font-weight:bold; }
+.mission-agent .agent-label { font-size:11px; letter-spacing:.12em; font-weight:bold; }
+.mission-agent .agent-state { font-size:9px; letter-spacing:.08em; fill:#9ab6c9; }
+@keyframes mission-pulse { 50% { stroke-width:5; stroke-opacity:.25; } }
+@media (prefers-reduced-motion:reduce) { .mission-agent.failed .agent-aura,.mission-agent.attention .agent-aura { animation:none; } }
+.mission-legend { position:absolute; left:28px; bottom:20px; display:flex; gap:20px; color:#8ea1b4; font-size:10px; letter-spacing:.09em; }
+.mission-legend i { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:7px; }
+.mission-legend i.ready { background:#4de0b2; }.mission-legend i.reserved { background:#ffbe65; }.mission-legend i.failed { background:#fa8b93; }
+.mission-drawer { position:absolute; z-index:5; top:140px; right:28px; width:245px; padding:22px; border:1px solid #385778; background:#0e1b2aef; box-shadow:0 16px 40px #0009; border-radius:12px; }
+.drawer-close { float:right; border:0; background:none; color:#b5c6d9; font-size:25px; cursor:pointer; }
+.drawer-eyebrow { font-size:10px; color:#67adf3; letter-spacing:.1em; }
+.mission-drawer h2 { margin:12px 0; }.mission-drawer p { font-size:12px; color:#c0ccda; }.mission-drawer a { color:#80bdff; }
+.swarm-timeline { max-width:1050px; padding:18px 10px 0; margin:10px auto 0; }
+.swarm-disclaimer { max-width:1050px; margin:auto; font-size:11px; }
+
+.swarm-head { display:grid; grid-template-columns:auto auto minmax(340px,1fr) auto auto; column-gap:16px; flex-wrap:initial; }
+.swarm-head form { justify-self:start; }
+.swarm-privacy { justify-self:end; margin:0; white-space:nowrap; }
+.scale-toggle { justify-self:end; white-space:nowrap; }
+@media(max-width:1100px){.swarm-head{grid-template-columns:auto auto 1fr;row-gap:8px}.swarm-privacy{justify-self:start}.scale-toggle{justify-self:end}}
+
+.swarm-head { grid-template-columns:auto auto minmax(350px,1fr) auto auto; }
+.swarm-head .swarm-privacy input { width:16px; height:16px; min-width:16px; padding:0; appearance:auto; }
+.swarm-head .swarm-privacy { margin-left:0; justify-self:end; }
+.swarm-head .scale-toggle { justify-self:end; }
+.mission-drawer { top:112px; right:28px; width:280px; box-sizing:border-box; background:#091522f2; backdrop-filter:blur(12px); }
+.mission-agent:focus { outline:none; }
+.mission-agent:focus .agent-aura { stroke:#fff; stroke-width:3; }
+/* Keep controls clear of the local fixture disclosure in a 1280px recording. */
+.swarm-head { grid-template-columns:auto auto minmax(280px,1fr) auto; grid-template-rows:36px 33px; gap:5px 16px; min-height:78px; align-items:center; }
+.swarm-head .swarm-eyebrow { grid-column:1; grid-row:1; }
+.swarm-head h1 { grid-column:2; grid-row:1; }
+.swarm-head form { grid-column:3; grid-row:1; }
+.swarm-head .swarm-privacy { grid-column:3; grid-row:2; justify-self:start; }
+.swarm-head .scale-toggle { grid-column:4; grid-row:2; justify-self:end; }
+@media(max-width:800px){.swarm-head{display:flex;flex-wrap:wrap;min-height:unset;padding:16px 4px}.swarm-head .scale-toggle{margin-left:0}}
+/* Synthetic scale is a separate, deliberately red-badged stress preview. */
+.scale-preview { background:radial-gradient(ellipse at 52% 58%,#172a40 0%,#0a1423 70%);border:1px solid #644453;box-shadow:inset 0 0 80px #07101e;margin:16px 0;padding:20px 24px;color:#e8eef7; }
+.scale-preview .scale-badge { background:#78313c;border:1px solid #cb6973;letter-spacing:.06em;font-size:10px; }
+.scale-preview h2 { margin:15px 0 8px;font-size:19px; }
+.scale-preview .scale-alert { background:#291d2bd9;border-left:3px solid #f07d87;color:#e9ccd2;font-size:12px; }
+.scale-preview .scale-map { max-height:430px; }
+.scale-cluster circle { filter:drop-shadow(0 0 10px #3ad7aa88); }
+.scale-cluster.is-alert circle { filter:drop-shadow(0 0 14px #f26a76bb); }
+.scale-detail { background:#0b1826;border-color:#375773;padding:16px; }
+.scale-detail button { background:#19374c;border:1px solid #4e8192;border-radius:6px;color:#d7f7f0; }
+.scale-detail canvas { background:#0e2030; }
+.mission-particle { fill:#bafbe8;filter:drop-shadow(0 0 5px #4de0b2);pointer-events:none; }
+@media(prefers-reduced-motion:reduce){.mission-particle{display:none}}
+.swarm-timeline { max-width:none;margin:16px 0 0;padding:18px 24px 8px;border:1px solid #273a4f;border-radius:12px;background:#0c1827; }
+.swarm-timeline h2 { text-transform:uppercase;font-size:11px;letter-spacing:.17em;color:#70b9ef;margin:0 0 20px; }
+.swarm-timeline h2 small { text-transform:none;letter-spacing:.02em;color:#8da4bb; }
+.swarm-activity { border-left-color:#39586b;padding-bottom:16px; }
+.swarm-activity > div { padding:10px 14px;border:1px solid #273e50;background:#102033;border-radius:8px; }
+.swarm-activity .swarm-dot { background:#43d9b4;box-shadow:0 0 10px #43d9b4;top:24px; }
+.swarm-activity.notification > div { background:#152333; }
+.swarm-disclaimer { max-width:none;color:#8195aa;padding:14px 4px; }

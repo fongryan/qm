@@ -2,6 +2,7 @@ import { html, svg, nothing, render } from "lit";
 import { api, withBase } from "./core-bridge";
 import { appState } from "./shell-state";
 import { normalizeSwarm, mergeMessages, graphLayout, deliverySignals, type SwarmInspection, type SwarmMessageView } from "./swarm-events";
+import { renderSyntheticScale } from "./swarm-scale-preview";
 import { errMessage } from "../../chassis/src/errors";
 
 let host: HTMLElement | null = null;
@@ -14,6 +15,7 @@ let revealPrivateText = false;
 let selectedMember = "";
 let timer: ReturnType<typeof setTimeout> | null = null;
 let generation = 0;
+let showSynthetic = false;
 
 function stop(): void {
   generation++;
@@ -39,11 +41,8 @@ function draw(): void {
     <header class="swarm-head">
       <span class="swarm-eyebrow">QM / LIVE INSPECTOR</span>
       <h1>Swarm View</h1>
-      <p>Follow member state, handoffs and notification runs in a session you can access. Read-only; refreshed every 3 seconds while this view is open.</p>
-      <label class="swarm-privacy"><input type="checkbox" .checked=${revealPrivateText} @change=${(e: Event) => {
-        revealPrivateText = (e.currentTarget as HTMLInputElement).checked;
-        draw();
-      }} /> Reveal message text and session links (private data)</label>
+
+
       <form @submit=${(e: Event) => {
         e.preventDefault();
         const field = (e.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>("input");
@@ -51,56 +50,61 @@ function draw(): void {
         if (!id || id.includes("/")) { error = "Enter a session ID, not a URL."; draw(); return; }
         void load(id);
       }}>
-        <label for="swarm-session">QM session ID</label>
+<label for="swarm-session">SESSION</label>
         <input id="swarm-session" name="session" .value=${sessionId} placeholder="Paste a session ID" autocomplete="off" />
         <button type="submit">Inspect</button>
       </form>
+      <label class="swarm-privacy"><input type="checkbox" .checked=${revealPrivateText} @change=${(e: Event) => { revealPrivateText = (e.currentTarget as HTMLInputElement).checked; draw(); }} /> Reveal private details</label>
+      <button class="scale-toggle" type="button" @click=${() => { showSynthetic = !showSynthetic; draw(); }}>${showSynthetic ? "Hide synthetic scale preview" : "Open synthetic 1,200-member scale preview"}</button>
       ${error ? html`<p class="swarm-error" role="alert">${error}</p>` : nothing}
     </header>
+    ${showSynthetic ? html`<div id="scale-host"></div>` : nothing}
     ${inspect ? html`
-      <div class="swarm-summary"><strong>${inspect.peers.length} members</strong><span>${messages.length} messages loaded</span><span>${busy ? "Refreshing…" : "Live refresh"}</span></div>
-      <section class="swarm-delivery" aria-label="Delivery signals">
-        <h2>Where to look next <small>QM delivery state, not a critical-path estimate</small></h2>
-        <p>${signals!.failedMembers} failed members · ${signals!.reserved} reserved members · ${signals!.failed} failed notifications · ${signals!.pending} pending · ${signals!.queued} queued</p>
-        ${signals!.members.slice(0, 5).map((entry) => html`<p>Member ${inspect!.peers.findIndex((peer) => peer.id === entry.memberId) + 1}: ${entry.failed} failed, ${entry.pending} pending deliveries</p>`)}
-        ${signals!.failed || signals!.pending || signals!.failedMembers || signals!.reserved ? nothing : html`<p>No failed or pending delivery signals in the loaded feed; queued work may still be waiting.</p>`}
-        <small>Queued means enqueued, not complete. No run completion, idle time, dependency graph, or bottleneck duration is available from this API.</small>
-      </section>
-      <section class="swarm-topology" aria-label="Swarm topology">
-        <h2>Topology <small>Parent links and current member state</small></h2>
-        ${svg`<svg viewBox=${`0 0 900 ${graphHeight}`} role="img" aria-label=${`${nodes.length} QM swarm members and parent links`}>
+      <div class="swarm-summary"><span class="swarm-live-dot"></span><strong>QM SESSION LIVE</strong><span>${inspect.peers.length} agents</span><span>${messages.length} messages</span><span>${busy ? "Refreshing…" : "Refreshes every 3s"}</span></div>
+      <section class="swarm-mission" aria-label="Swarm mission control">
+        <div class="mission-meta"><span>LIVE TOPOLOGY</span><span>${inspect.peers.length} AGENTS · ${signals!.queued} QUEUED · ${signals!.failed} FAILED</span></div>
+        ${signals!.failed || signals!.pending || signals!.failedMembers || signals!.reserved ? html`<div class="mission-alert"><strong>WHERE TO LOOK NEXT</strong><span>${signals!.failed} failed · ${signals!.pending} pending deliveries · ${signals!.failedMembers} failed agents</span><small>Delivery signals only, not a critical path</small></div>` : html`<div class="mission-alert quiet"><strong>NO FAILED DELIVERY SIGNALS</strong><span>${signals!.queued} queued, not yet confirmed complete</span></div>`}
+        ${selectedMember ? html`<aside class="mission-drawer" aria-label="Selected member evidence">
+          <button class="drawer-close" @click=${() => { selectedMember=""; draw(); }} aria-label="Close evidence">×</button>
+          <span class="drawer-eyebrow">MEMBER EVIDENCE / ${inspect.peers.findIndex((m) => m.id === selectedMember)+1}</span>
+          <h2>${selectedMember === inspect!.self.id ? "Orchestrator" : `Worker ${inspect.peers.findIndex((m) => m.id === selectedMember)+1}`}</h2>
+          <p>State: ${inspect.peers.find((m) => m.id === selectedMember)?.state ?? "Unknown"}</p>
+          <p>${messages.filter((m) => m.senderId === selectedMember).length} messages sent; ${messages.filter((m) => Object.hasOwn(m.notifications,selectedMember)).length} notifications in loaded feed.</p>
+          <p>Read-only evidence, not a generated proof pack.</p>
+          ${revealPrivateText && inspect.peers.find((m) => m.id === selectedMember)?.sessionId ? html`<a href=${withBase(`/s/${encodeURIComponent(inspect.peers.find((m)=>m.id===selectedMember)!.sessionId!)}`)}>Open member session</a>` : nothing}
+        </aside>` : nothing}
+        ${svg`<svg class="mission-graph" viewBox=${`0 0 900 ${Math.max(500, graphHeight + 145)}`} role="img" aria-label=${`${nodes.length} QM swarm members and parent links`}>
+          <defs><radialGradient id="mission-glow"><stop stop-color="#315479" stop-opacity=".24"/><stop offset="1" stop-color="#101928" stop-opacity="0"/></radialGradient></defs>
+          <circle cx="450" cy="235" r="370" fill="url(#mission-glow)"/>
           ${nodes.map((node) => {
             const parent = nodes.find((n) => n.id === node.parentId);
-            return parent ? svg`<path class="swarm-edge" d=${`M ${parent.x} ${parent.y + 25} L ${node.x} ${node.y - 25}`} />` : nothing;
+            return parent ? svg`<path class="mission-link" d=${`M ${parent.x} ${parent.y + 85} L ${node.x} ${node.y + 85}`} />` : nothing;
           })}
-          ${nodes.map((node) => svg`<g class="swarm-graph-node ${node.state} ${selectedMember === node.id ? "selected" : ""}"
-            role="button" tabindex="0" aria-label=${`Inspect member ${inspect!.peers.findIndex((m) => m.id === node.id) + 1}, ${node.state}`}
-            @click=${() => { selectedMember = node.id; draw(); }}
-            @keydown=${(e: KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectedMember = node.id; draw(); } }}>
-            <circle cx=${node.x} cy=${node.y} r="26"></circle>
-            <text x=${node.x} y=${node.y + 5} text-anchor="middle">${inspect!.peers.findIndex((m) => m.id === node.id) + 1}</text>
-          </g>`)}
+          ${nodes.filter((node) => node.parentId && messages.some((m) => m.audience.includes(node.id) || m.senderId === node.id)).map((node) => {
+            const parent = nodes.find((n) => n.id === node.parentId)!;
+            const path = `M ${parent.x} ${parent.y + 85} L ${node.x} ${node.y + 85}`;
+            return svg`<circle class="mission-particle" r="3"><animateMotion dur="4s" begin="${(nodes.indexOf(node)%5)*-.7}s" repeatCount="indefinite" path=${path}/></circle>`;
+          })}
+          ${nodes.map((node) => {
+            const member = inspect!.peers.find((m) => m.id === node.id)!;
+            const number = inspect!.peers.indexOf(member) + 1;
+            const volume = messages.filter((m) => m.senderId === node.id).length;
+            const label = member.id === inspect!.self.id ? "ORCHESTRATOR" : `WORKER ${String(number).padStart(2,"0")}`;
+            const trouble = signals!.members.some((m) => m.memberId === node.id);
+            return svg`<g class="mission-agent ${node.state} ${trouble ? "attention" : ""} ${selectedMember === node.id ? "selected" : ""}"
+                role="button" tabindex="0" aria-label=${`${label}, ${node.state}, ${volume} messages`} @click=${() => { selectedMember=node.id; draw(); }}
+                @keydown=${(e: KeyboardEvent) => { if(e.key === "Enter" || e.key === " "){e.preventDefault(); selectedMember=node.id; draw();} }}>
+              <circle class="agent-aura" cx=${node.x} cy=${node.y + 85} r=${38 + Math.min(14,volume*4)} />
+              <circle class="agent-core" cx=${node.x} cy=${node.y + 85} r=${25 + Math.min(9,volume*3)} />
+              <text class="agent-number" x=${node.x} y=${node.y + 91} text-anchor="middle">${String(number).padStart(2,"0")}</text>
+              <text class="agent-label" x=${node.x} y=${node.y + 141} text-anchor="middle">${label}</text>
+              <text class="agent-state" x=${node.x} y=${node.y + 158} text-anchor="middle">${node.state.toUpperCase()} · ${volume} MSG</text>
+            </g>`;
+          })}
         </svg>`}
+        <div class="mission-legend"><span><i class="ready"></i>READY</span><span><i class="reserved"></i>RESERVED</span><span><i class="failed"></i>FAILED</span><span>STATE IS A SNAPSHOT · PARTICLES REPLAY LOADED MESSAGES</span></div>
       </section>
-      <section aria-label="Swarm members" class="swarm-grid">
-        ${inspect.peers.map((member, index) => html`<article class="swarm-member state-${member.state} ${selectedMember === member.id ? "selected" : ""}">
-          <button class="swarm-node" type="button" @click=${() => { selectedMember = member.id; draw(); }} aria-label=${`Inspect member ${index + 1}`}>
-          <span class="swarm-node-number">${String(index + 1).padStart(2, "0")}</span> View evidence</button>
-          <div class="swarm-member-top"><span class="swarm-depth">Depth ${member.depth}</span><span class="swarm-status">${member.state}</span></div>
-          <h2>${member.id === inspect!.self.id ? "Root / current member" : `Member ${index + 1}`}</h2>
-          ${revealPrivateText ? html`<code title=${member.id}>${member.id}</code>` : nothing}
-          ${member.parentId ? html`<p>Has parent member</p>` : nothing}
-          ${member.error ? html`<p class="swarm-error">${revealPrivateText ? member.error : "Failure details hidden"}</p>` : nothing}
-          ${revealPrivateText && member.sessionId ? html`<a href=${withBase(`/s/${encodeURIComponent(member.sessionId)}`)}>Open session evidence</a>` : nothing}
-        </article>`)}
-      </section>
-      ${selectedMember ? html`<section class="swarm-proof" aria-label="Selected member evidence"><h2>Member evidence</h2>
-        <p>QM member state: ${inspect.peers.find((m) => m.id === selectedMember)?.state ?? "Unknown"}.
-          ${messages.filter((m) => m.senderId === selectedMember).length} messages sent in the loaded feed;
-          ${messages.filter((m) => Object.hasOwn(m.notifications, selectedMember)).length} notification records.
-        </p><p>A member session link is available above when private details are revealed and QM supplies a session ID. This is a read-only evidence link, not a generated proof pack.</p>
-      </section>` : nothing}
-      <section class="swarm-timeline" aria-label="Swarm activity"><h2>Activity <small>QM source data</small></h2>
+      <section class="swarm-timeline" aria-label="Swarm activity"><h2>Signal log <small>QM source data · latest loaded messages</small></h2>
         ${events.filter((e) => e.kind !== "member").length ? events.filter((e) => e.kind !== "member").map((event) => event.kind === "message"
           ? html`<article class="swarm-activity"><span class="swarm-dot"></span><div><div class="swarm-activity-top"><strong>${event.author === "human" ? "Human" : "Agent"} ${inspect!.peers.findIndex((m) => m.id === event.memberId) + 1 || "?"}</strong><time>${new Date(event.at).toLocaleTimeString()}</time></div><p>${revealPrivateText ? event.text : "Message text hidden for demo privacy"}</p><small>#${event.seq} · to ${event.audience.length} member${event.audience.length === 1 ? "" : "s"}${event.replyTo ? html` · replies to #${messages.find((m) => m.id === event.replyTo)?.seq ?? "earlier message"}` : nothing}</small></div></article>`
           : html`<article class="swarm-activity notification"><span class="swarm-dot"></span><div><strong>Member ${inspect!.peers.findIndex((m) => m.id === event.memberId) + 1 || "?"}</strong> notification ${event.state} for #${event.messageSeq}${event.runId ? html` · run ${revealPrivateText ? html`<code>${event.runId}</code>` : "recorded"}` : nothing}</div></article>`)
@@ -109,6 +113,7 @@ function draw(): void {
       <p class="swarm-disclaimer">Member state is a current snapshot, not a timestamped state history. The message feed is bounded to 256 messages per refresh; later messages may be omitted.</p>
     ` : html`<div class="swarm-empty">${busy ? "Loading…" : "Enter a session ID to inspect its swarm."}</div>`}
   `, host);
+  if (showSynthetic) { const scaleHost = host.querySelector<HTMLElement>("#scale-host"); if (scaleHost) renderSyntheticScale(scaleHost); }
 }
 
 async function poll(version: number): Promise<void> {
