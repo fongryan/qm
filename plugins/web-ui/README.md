@@ -392,3 +392,24 @@ across accounts is refused. Organizations that already require individual accoun
 continue to require them.
 
 The standalone `::link-slack-account{}` directive offers personal Slack account linking in a web reply. It shows the account card or linked status, requires the company bot to be installed first, and does not include the app picker. `::add-to-slack{}` remains the company installation trigger.
+
+### Optional GBrain memory-evidence demo (local, not a native QM integration)
+
+`test/support/swarm-gbrain-demo.ts` is a **local test harness**, not a production
+connector. With the official [garrytan/gbrain](https://github.com/garrytan/gbrain)
+source checked out and a separate keyless PGLite brain initialized, set
+`GBRAIN_SOURCE_DIR` to that source checkout and `GBRAIN_HOME` to the parent of
+its `.gbrain` config. Run the script with Node 24 from this repo, then call
+`GET http://127.0.0.1:5225/start`. In a stubbed QM sandbox, Instinct-authored
+worker A writes one synthetic-safe fact using GBrain `remember` with provenance.
+Worker B separately invokes `recall`, checks the exact fact ID, text and source,
+then sends a QM message informed by it. The harness exposes a read-only local
+`/v1/sessions/<fixture-id>/memory-demo` receipt. The browser-only fixture host
+may call `setSwarmMemoryEvidence(receipt)` to show a dotted memory edge and a
+source-labeled panel. The real Swarm View does not fetch that route and does
+not infer memories from QM message text.
+
+No Aside task, hosted GBrain workspace, QM worker model, or AoA runtime is
+running in this demo. Aside's local-first browser memory could feed the same
+brain later only through an explicitly consented and redacted handoff. This
+is a design path, not a built integration.

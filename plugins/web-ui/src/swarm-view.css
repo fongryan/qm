@@ -163,3 +163,10 @@
 .swarm-activity .swarm-dot { background:#43d9b4;box-shadow:0 0 10px #43d9b4;top:24px; }
 .swarm-activity.notification > div { background:#152333; }
 .swarm-disclaimer { max-width:none;color:#8195aa;padding:14px 4px; }
+.memory-link {fill:none;stroke:#c491f7;stroke-width:2.5;stroke-dasharray:5 7;filter:drop-shadow(0 0 7px #a96cfa);}
+.mission-legend i.memory {background:#c491f7;box-shadow:0 0 8px #a96cfa;}
+.memory-evidence {margin:16px 0 0;padding:20px 24px;border:1px solid #725996;background:linear-gradient(120deg,#18172e,#0d1c2b);border-radius:12px;color:#dfe8f4;}
+.memory-kicker {font-size:10px;letter-spacing:.16em;color:#caa2f4;}
+.memory-evidence h2 {margin:8px 0;font-size:18px;}
+.memory-evidence p {font-size:13px;}.memory-evidence .memory-fact{color:#c8d2dd;}
+.memory-evidence small {font-size:11px;color:#aab1c7;}

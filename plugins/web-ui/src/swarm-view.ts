@@ -2,6 +2,7 @@ import { html, svg, nothing, render } from "lit";
 import { api, withBase } from "./core-bridge";
 import { appState } from "./shell-state";
 import { normalizeSwarm, mergeMessages, graphLayout, deliverySignals, type SwarmInspection, type SwarmMessageView } from "./swarm-events";
+import { verifiedMemoryLink, type MemoryReceipt } from "./swarm-memory-evidence";
 import { renderSyntheticScale } from "./swarm-scale-preview";
 import { errMessage } from "../../chassis/src/errors";
 
@@ -16,6 +17,9 @@ let selectedMember = "";
 let timer: ReturnType<typeof setTimeout> | null = null;
 let generation = 0;
 let showSynthetic = false;
+let memoryReceipt: MemoryReceipt | null = null;
+/** A caller may attach a separately verified memory receipt; QM itself has no memory endpoint. */
+export function setSwarmMemoryEvidence(receipt: MemoryReceipt | null): void { memoryReceipt = receipt; draw(); }
 
 function stop(): void {
   generation++;
@@ -36,6 +40,7 @@ function draw(): void {
   const events = inspect ? normalizeSwarm(inspect, messages) : [];
   const nodes = inspect ? graphLayout(inspect.peers) : [];
   const signals = inspect ? deliverySignals(inspect, messages) : null;
+  const memoryLink = inspect ? verifiedMemoryLink(memoryReceipt, inspect.peers.map((m) => m.id)) : null;
   const graphHeight = Math.max(120, ...nodes.map((node) => node.y + 55));
   render(html`
     <header class="swarm-head">
@@ -80,6 +85,7 @@ function draw(): void {
             const parent = nodes.find((n) => n.id === node.parentId);
             return parent ? svg`<path class="mission-link" d=${`M ${parent.x} ${parent.y + 85} L ${node.x} ${node.y + 85}`} />` : nothing;
           })}
+          ${memoryLink ? (() => {const from=nodes.find((n)=>n.id===memoryLink.from)!;const to=nodes.find((n)=>n.id===memoryLink.to)!;return svg`<path class="memory-link" d=${`M ${from.x} ${from.y+85} Q 450 -120 ${to.x} ${to.y+85}`} />`;})() : nothing}
           ${nodes.filter((node) => node.parentId && messages.some((m) => m.audience.includes(node.id) || m.senderId === node.id)).map((node) => {
             const parent = nodes.find((n) => n.id === node.parentId)!;
             const path = `M ${parent.x} ${parent.y + 85} L ${node.x} ${node.y + 85}`;
@@ -102,8 +108,15 @@ function draw(): void {
             </g>`;
           })}
         </svg>`}
-        <div class="mission-legend"><span><i class="ready"></i>READY</span><span><i class="reserved"></i>RESERVED</span><span><i class="failed"></i>FAILED</span><span>STATE IS A SNAPSHOT · PARTICLES REPLAY LOADED MESSAGES</span></div>
+        <div class="mission-legend"><span><i class="ready"></i>READY</span><span><i class="reserved"></i>RESERVED</span><span><i class="failed"></i>FAILED</span><span>STATE IS A SNAPSHOT · PARTICLES REPLAY LOADED MESSAGES</span>${memoryLink ? html`<span><i class="memory"></i>VERIFIED LOCAL MEMORY RECALL</span>` : nothing}</div>
       </section>
+      ${memoryLink && memoryReceipt ? html`<section class="memory-evidence" aria-label="GBrain memory evidence">
+        <span class="memory-kicker">GBRAIN / LOCAL PGLITE · VERIFIED READBACK</span>
+        <h2>What this swarm learned</h2>
+        <p>Worker ${inspect.peers.findIndex((m)=>m.id===memoryLink.from)+1} wrote fact #${memoryLink.factId}; worker ${inspect.peers.findIndex((m)=>m.id===memoryLink.to)+1} recalled the exact fact with its source before replying.</p>
+        <p class="memory-fact">${revealPrivateText ? memoryReceipt.fact : "Fact text hidden for demo privacy"}</p>
+        <small>Source: ${revealPrivateText ? memoryReceipt.provenance : "local, source-bound GBrain receipt"}. This receipt comes from the local demo, not the QM inspect API. No hosted or Aside integration is implied.</small>
+      </section>` : nothing}
       <section class="swarm-timeline" aria-label="Swarm activity"><h2>Signal log <small>QM source data · latest loaded messages</small></h2>
         ${events.filter((e) => e.kind !== "member").length ? events.filter((e) => e.kind !== "member").map((event) => event.kind === "message"
           ? html`<article class="swarm-activity"><span class="swarm-dot"></span><div><div class="swarm-activity-top"><strong>${event.author === "human" ? "Human" : "Agent"} ${inspect!.peers.findIndex((m) => m.id === event.memberId) + 1 || "?"}</strong><time>${new Date(event.at).toLocaleTimeString()}</time></div><p>${revealPrivateText ? event.text : "Message text hidden for demo privacy"}</p><small>#${event.seq} · to ${event.audience.length} member${event.audience.length === 1 ? "" : "s"}${event.replyTo ? html` · replies to #${messages.find((m) => m.id === event.replyTo)?.seq ?? "earlier message"}` : nothing}</small></div></article>`
