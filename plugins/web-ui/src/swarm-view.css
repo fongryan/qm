@@ -186,3 +186,46 @@
 .human-fixture-badge small {display:block;color:#d2c4dc;font-size:10px;line-height:1.3;margin-top:3px;}
 
 .queue-evidence{display:flex;align-items:center;gap:24px;border:1px solid #365a81;border-radius:12px;background:#101e2f;padding:13px 18px;margin:7px 0 11px;color:#c5d7e7;font-size:12px}.queue-evidence>div:first-child{display:grid;gap:3px;min-width:330px}.queue-evidence strong{font-size:10px;letter-spacing:.14em;color:#72c6ff}.queue-evidence small{font-size:10px;color:#98aac1}.queue-evidence>.queue-track{flex:1;background:#233c51;height:11px;border-radius:8px;overflow:hidden}.queue-track>div{background:linear-gradient(90deg,#5588ee,#46d9a9);height:100%;transition:width .5s}.queue-evidence>span{white-space:nowrap}@media(max-width:900px){.queue-evidence{flex-wrap:wrap}.queue-evidence>.queue-track{min-width:180px}}
+/* Demo operations layout: policies and tickets remain visible next to the swarm. */
+.swarm-view { background:#0c1420; }
+.swarm-head { grid-template-columns:auto auto minmax(270px,1fr) auto; grid-template-rows:38px; min-height:62px; }
+.swarm-head .swarm-privacy { grid-column:4; grid-row:1; }
+.swarm-eyebrow { color:#a8c4d9; letter-spacing:.1em; }
+.swarm-summary { padding:9px 4px; }
+.swarm-live-dot { box-shadow:none; }
+.swarm-workspace { display:grid; grid-template-columns:minmax(290px,340px) minmax(450px,1fr); gap:14px; align-items:stretch; }
+.swarm-sidebar { min-width:0; display:grid; gap:12px; grid-template-rows:auto minmax(200px,1fr); }
+.swarm-mission { min-height:590px; height:calc(100vh - 220px); max-height:760px; background:#101e2d; border-radius:12px; box-shadow:none; }
+.swarm-mission:before { opacity:.5; }
+.memory-evidence { margin:0; padding:17px 18px; border-color:#455a70; background:#172535; border-radius:10px; }
+.memory-kicker { color:#9ab1c8; font-size:10px; letter-spacing:.11em; }
+.memory-evidence h2 { margin:6px 0; font-size:20px; color:#e7f1f6; }
+.memory-evidence .memory-intro { margin:5px 0 12px; font-size:11px; line-height:1.35; color:#a8bac9; }
+.memory-policies { list-style:none; margin:0; padding:0; display:grid; gap:5px; }
+.memory-policies li { padding:8px 9px; border:1px solid #334a61; border-radius:6px; background:#102032; }
+.memory-policies li span { display:block; font-size:9px; color:#78cbb6; font-weight:700; letter-spacing:.1em; }
+.memory-policies li p { font-size:11px; margin:4px 0 0; line-height:1.3; color:#d5e2ed; }
+.memory-evidence small { display:block; margin-top:8px; color:#9caec0; }
+.ticket-inbox { overflow:hidden; min-height:0; display:flex; flex-direction:column; background:#121e2c; border:1px solid #324457; border-radius:10px; }
+.ticket-inbox-head { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid #314255; }
+.ticket-inbox-head h2 { margin:0; font-size:16px; }.ticket-inbox-head span { color:#a8bdce; font-size:11px; }
+.ticket-list { overflow:auto; min-height:0; }
+.ticket-row { padding:10px 14px; border-bottom:1px solid #263a4d; }
+.ticket-row>div { display:flex; justify-content:space-between; gap:8px; font-size:12px; }
+.ticket-row>div span { color:#91a9ba; }.ticket-row p { margin:4px 0 6px; font-size:11px; color:#b8c9d6; }
+.ticket-row small { display:inline-block; padding:2px 7px; border-radius:4px; font-size:10px; background:#253e4a; color:#96dfbd; }
+.ticket-row .status-review { color:#ffd5ac; background:#4b3528; }.ticket-row .status-progress { color:#c0d1eb; background:#2b3b58; }
+.mission-alert { box-shadow:none; }.mission-alert.stalled { animation:none; box-shadow:none; }
+.mission-agent .agent-core { filter:none; }.mission-particle { filter:none; }
+.human-fixture-badge { box-shadow:none; }
+.queue-evidence>.queue-track>div { background:#45bca5; }
+.swarm-disclaimer { font-size:11px; padding-top:12px; }
+@media(max-width:900px){.swarm-workspace{display:block}.swarm-sidebar{margin-bottom:12px}.swarm-mission{height:600px}.ticket-list{max-height:250px}}
+.live-ticket { display:flex;align-items:center;gap:16px;padding:10px 14px;margin:6px 0 12px;background:#172637;border:1px solid #435a6d;border-radius:9px; }
+.live-ticket>div {display:grid;min-width:168px}.live-ticket strong{font-size:13px}.live-ticket small{font-size:10px;color:#acbfd0}
+.live-ticket form {display:flex;gap:6px;flex:1}.live-ticket input {min-width:0;flex:1;border:1px solid #4b6277;border-radius:5px;background:#0d1a28;color:#e7f0f8;padding:8px;font-size:11px}.live-ticket input[name=detail]{flex:2}
+.live-ticket button,.review-controls button {border:1px solid #7dbdad;border-radius:5px;background:#1a6257;color:#f1fffb;padding:7px 10px;cursor:pointer;white-space:nowrap}.live-ticket button:disabled{opacity:.5;cursor:wait}
+.ticket-draft {padding:7px 8px;border-left:2px solid #63b8aa;background:#193144;line-height:1.4}.ticket-draft span{display:block;color:#96d6be;margin-top:4px}
+.review-controls {display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.review-controls input{min-width:100px;flex:1;background:#0c1827;border:1px solid #5b7184;color:white;padding:5px}.review-controls button{font-size:10px;padding:5px 7px}.review-controls button:last-child{background:#4b3540;border-color:#856b74}
+@media(max-width:1100px){.live-ticket{display:block}.live-ticket form{margin-top:8px;flex-wrap:wrap}.live-ticket input[name=detail]{min-width:200px}}
+.memory-policies a {display:inline-block;margin-top:4px;color:#93c5e6;font-size:10px}

@@ -21,6 +21,7 @@ export async function swarmFixture(
     lock?: AdvisoryLock;
     backend?: Sandbox;
     runtime?: Pick<OrchestratorInput, "model" | "harness" | "thinkingLevel" | "fastMode">;
+    actorId?: string;
   } = {},
 ) {
   const sessions = options.sessions ?? createMemorySessionStore();
@@ -80,11 +81,11 @@ export async function swarmFixture(
     routes,
     resources: sandboxes,
   });
-  const actor = { id: "alice", type: "internal" as const };
+  const actor = { id: options.actorId ?? "alice", type: "internal" as const };
   const root = await sessions.getOrCreateByThread(
-    `web:alice:${randomUUID()}`,
+    `web:${actor.id}:${randomUUID()}`,
     "dm",
-    "personal:alice",
+    `personal:${actor.id}`,
     undefined,
     "web",
   );

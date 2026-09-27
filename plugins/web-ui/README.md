@@ -450,3 +450,28 @@ worker reply. The UI derives its human badge from that QM message, labels it
 **fixture-sent**, and does not add a fake human swarm member. It is not Ryan's
 approval, a real customer case, a refund, or a customer-facing send. The
 approval fixture route is local only and not part of the web production API.
+
+### Interactive support demo (local only)
+
+`test/support/swarm-live-demo.ts` is a separate local in-memory QM session, not a
+hosted QM or Armalo workspace. It has one local test actor (`demo-operator`),
+eight fixture workers, and a form for invented tickets. Submitting a ticket
+posts a QM human-authored dispatch under that **test actor**, retrieves exact
+source-bound facts from a separate local GBrain PGLite instance, then drafts an
+internal response through a pluggable `DraftModel` port. The default adapter is
+a deterministic local rules adapter, not a model turn. A draft cites a GBrain
+fact ID and a refund draft waits for a deliberate Approve/Deny click. Review
+posts a second QM human-authored test message and, when there is a review note,
+stores it as a **demo note, not company policy**, with a separate GBrain receipt.
+No customer message, refund, payment, or authenticated Ryan approval occurs.
+
+The memory includes three invented support rules and a source-linked public
+Armalo statement from https://armalo.ai/ about drafting support replies and
+looping in a human. No private Armalo data is loaded. `river-draft-worker.py` is
+an optional adapter prototype. It reads `RIVER_API_KEY` from a process
+environment, but the local server does not wire that key into a request and
+never claims a River run unless an actual call is independently verified. The
+front-end shows the adapter name to keep scripted and model behavior distinct.
+The 24-ticket scripted fixture remains the fallback demo. The 1,200-member
+synthetic scale preview is not in the main support workflow; QM's configured
+member ceiling remains 64.
