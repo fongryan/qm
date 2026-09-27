@@ -44,6 +44,29 @@ Env (see `.env.example`): `CORE_API_URL` (default `http://localhost:8080`),
 `WEB_UI_PRINCIPALS` (csv allowlist; empty = any id, **dev only**),
 and `CORE_SIGNING_SECRET` (same value as the core when source-auth is enabled).
 
+## Swarm View (read-only)
+
+Open **Swarm View** from the web shell and enter a QM session ID that your
+account can access. It shows the current member roster and parent links,
+member state, a bounded message/notification feed, and a selected member's
+message and notification counts. The page refreshes every three seconds while
+open. It does not spawn agents or change the swarm.
+
+The web server forwards verified portal identity to the core after checking
+session visibility. The core checks access and swarm membership again. Message
+text and session IDs are hidden by default. The **Reveal message text and
+session links** checkbox exposes private details only in the current browser
+view; it does not change sharing permissions. A member session link appears
+only when QM supplies one and the checkbox is on.
+
+The **Member evidence** panel is a read-only summary, not a generated Task
+Proof Pack. Member state is a snapshot, not a timestamped history. Message
+reads are bounded to 256 entries per refresh, so a busy swarm can omit earlier
+activity. The in-memory integration test exercises QM spawn/send/inspect/read
+with a stub sandbox; it does not establish that a real model or hosted swarm
+ran. A production deployment still needs the configured sandbox, model and
+session stores described in `docs/swarms.md`.
+
 ## Suggested activities
 
 Suggested activity generation is **on by default** when the configured harness supports
