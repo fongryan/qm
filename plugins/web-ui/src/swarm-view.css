@@ -179,3 +179,8 @@
 .mission-alert.stalled {width:300px;line-height:1.35;}
 .mission-alert.stalled span {font-size:13px;font-weight:700;}
 .mission-alert.stalled small {color:#e9bfc7;line-height:1.35;}
+
+.human-fixture-badge {position:absolute;z-index:3;right:28px;top:132px;display:flex;gap:10px;align-items:center;padding:10px 14px;max-width:275px;background:#25203bcc;border:1px solid #a488c2;border-radius:10px;box-shadow:0 0 20px #78529a55;}
+.human-fixture-badge .human-avatar {width:30px;height:30px;display:grid;place-items:center;flex:none;background:#805caa;border-radius:50%;font-weight:bold;}
+.human-fixture-badge strong {display:block;color:#d7b8f5;font-size:10px;letter-spacing:.08em;}
+.human-fixture-badge small {display:block;color:#d2c4dc;font-size:10px;line-height:1.3;margin-top:3px;}

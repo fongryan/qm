@@ -46,6 +46,7 @@ function draw(): void {
   const signals = inspect ? deliverySignals(inspect, messages) : null;
   const nonReply = inspect ? measuredNonReply(stallReceipt, inspect.peers.map((m)=>m.id)) : null;
   const memoryLink = inspect ? verifiedMemoryLink(memoryReceipt, inspect.peers.map((m) => m.id)) : null;
+  const fixtureHumanMessage = messages.find((m)=>m.author==="human" && m.text.startsWith("Test actor approval for synthetic refund #1 draft only."));
   const graphHeight = Math.max(120, ...nodes.map((node) => node.y + 55));
   render(html`
     <header class="swarm-head">
@@ -73,6 +74,7 @@ function draw(): void {
       <div class="swarm-summary"><span class="swarm-live-dot"></span><strong>QM SESSION LIVE</strong><span>${inspect.peers.length} agents</span><span>${messages.length} messages</span><span>${busy ? "Refreshing…" : "Refreshes every 3s"}</span></div>
       <section class="swarm-mission" aria-label="Swarm mission control">
         <div class="mission-meta"><span>LIVE TOPOLOGY</span><span>${inspect.peers.length} AGENTS · ${signals!.queued} QUEUED · ${signals!.failed} FAILED</span></div>
+        ${fixtureHumanMessage ? html`<div class="human-fixture-badge"><span class="human-avatar">H</span><div><strong>HUMAN MESSAGE / FIXTURE-SENT</strong><small>Synthetic refund draft approved in QM #${fixtureHumanMessage.seq}. Not Ryan and no real refund.</small></div></div>` : nothing}
         ${nonReply ? html`<div class="mission-alert stalled"><strong>FOLLOW-UP NEEDS ATTENTION</strong><span>Worker ${inspect.peers.findIndex((m)=>m.id===nonReply.memberId)+1}: no reply for ${nonReply.seconds}s (threshold ${nonReply.thresholdSeconds}s)</span><small>Measured local fixture dispatch, not a QM run-health signal</small></div>` : signals!.failed || signals!.pending || signals!.failedMembers || signals!.reserved ? html`<div class="mission-alert"><strong>WHERE TO LOOK NEXT</strong><span>${signals!.failed} failed · ${signals!.pending} pending deliveries · ${signals!.failedMembers} failed agents</span><small>Delivery signals only, not a critical path</small></div>` : html`<div class="mission-alert quiet"><strong>NO FAILED DELIVERY SIGNALS</strong><span>${signals!.queued} queued, not yet confirmed complete</span></div>`}
         ${selectedMember ? html`<aside class="mission-drawer" aria-label="Selected member evidence">
           <button class="drawer-close" @click=${() => { selectedMember=""; draw(); }} aria-label="Close evidence">×</button>
@@ -123,7 +125,7 @@ function draw(): void {
         <p class="memory-fact">${revealPrivateText ? memoryReceipt.fact : "Fact text hidden for demo privacy"}</p>
         <small>Source: ${revealPrivateText ? memoryReceipt.provenance : "local, source-bound GBrain receipt"}. This receipt comes from the local demo, not the QM inspect API. No hosted or Aside integration is implied.</small>
       </section>` : nothing}
-      <section class="swarm-timeline" aria-label="Swarm activity"><h2>Signal log <small>QM source data · latest loaded messages</small></h2>
+      <section class="swarm-timeline" aria-label="Swarm activity"><h2>Support queue signal log <small>Four synthetic tickets · QM source messages, no customer sends</small></h2>
         ${events.filter((e) => e.kind !== "member").length ? events.filter((e) => e.kind !== "member").map((event) => event.kind === "message"
           ? html`<article class="swarm-activity"><span class="swarm-dot"></span><div><div class="swarm-activity-top"><strong>${event.author === "human" ? "Human" : "Agent"} ${inspect!.peers.findIndex((m) => m.id === event.memberId) + 1 || "?"}</strong><time>${new Date(event.at).toLocaleTimeString()}</time></div><p>${revealPrivateText ? event.text : "Message text hidden for demo privacy"}</p><small>#${event.seq} · to ${event.audience.length} member${event.audience.length === 1 ? "" : "s"}${event.replyTo ? html` · replies to #${messages.find((m) => m.id === event.replyTo)?.seq ?? "earlier message"}` : nothing}</small></div></article>`
           : html`<article class="swarm-activity notification"><span class="swarm-dot"></span><div><strong>Member ${inspect!.peers.findIndex((m) => m.id === event.memberId) + 1 || "?"}</strong> notification ${event.state} for #${event.messageSeq}${event.runId ? html` · run ${revealPrivateText ? html`<code>${event.runId}</code>` : "recorded"}` : nothing}</div></article>`)

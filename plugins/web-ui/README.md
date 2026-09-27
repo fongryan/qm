@@ -436,3 +436,17 @@ The member is deliberately not driven in this fixture. This is not proof that
 a production agent is stuck, looping, idle, or failing: QM inspect does not
 expose that run-health evidence. The ordinary viewer has no timer endpoint and
 never draws this alert without a verified fixture receipt.
+
+### Synthetic support queue story
+
+The local fixture now dispatches four **invented** support tickets (refund,
+shipping delay, billing error, VIP complaint) through real QM service messages.
+Instinct-authored workers draft responses; one writes four invented support
+rules to local GBrain and a second independently recalls them before drafting.
+A third worker is intentionally held at the synthetic refund approval gate.
+After the measured 20-second non-reply, the fixture can send a `human`-authored
+QM message from its own test actor (`alice`) as a reply to that draft and then a
+worker reply. The UI derives its human badge from that QM message, labels it
+**fixture-sent**, and does not add a fake human swarm member. It is not Ryan's
+approval, a real customer case, a refund, or a customer-facing send. The
+approval fixture route is local only and not part of the web production API.
