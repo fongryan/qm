@@ -18,22 +18,24 @@ const seed=[
  {fact:'Demo policy: refund requests require human review before any refund action.',topic:'approval',tags:['refund','approval']},
  {fact:'Demo policy: billing errors require account verification; never ask for card numbers in messages.',topic:'privacy',tags:['billing','privacy']},
  {fact:'Demo policy: delayed shipping gets a status draft before any customer-facing reply.',topic:'workflow',tags:['shipping','workflow']},
- {fact:'Public Armalo page says its customer-support team drafts replies and loops in a human for the rest.',topic:'product',tags:['armalo','support']}
+ {fact:'Demo policy: urgent cases get a triage draft, not an automatic escalation.',topic:'triage',tags:['urgent','triage']},
+ {fact:'Demo policy: each internal draft cites the memory rule it used.',topic:'citation',tags:['draft','citation']}
 ];
 const writer=await fixture.service.spawn(fixture.caller,{requestId:'memory-writer',text:'Store demo support policies.',count:1});
 const workers=await fixture.service.spawn(fixture.caller,{requestId:'live-support-workers',text:'Draft demo support tickets only. No customer sends, refunds or payments.',count:7});
 await fixture.service.sweep();
-const stored=memory.write(entity,writer[0]!.id,'Invented local demo policy, not Armalo policy',seed.slice(0,3));
-stored.push(...memory.write(entity,writer[0]!.id,'https://armalo.ai/ (public page, observed 2026-09-27)',seed.slice(3)));
+const stored=memory.write(entity,writer[0]!.id,'Invented local demo policy, not a company policy',seed.slice(0,3));
+stored.push(...memory.write(entity,writer[0]!.id,'Invented local demo policy, not a company policy',seed.slice(3)));
 const reader=workers[0]!.id;
 let verified=memory.recall(entity,reader,stored).facts;
-const state:{tickets:Array<LiveTicket & {status:string;draft?:string;policyId?:string;needsReview?:boolean;messageId?:string}>;busy:boolean;error?:string;model:string}={tickets:[],busy:false,model:'Offline draft adapter'};
+const state:{tickets:Array<LiveTicket & {status:string;draft?:string;policyId?:string;needsReview?:boolean;messageId?:string;workerId?:string;reviewNoteId?:string}>;busy:boolean;error?:string;model:string}={tickets:[],busy:false,model:'Offline draft adapter'};
 let next=0;
 const reviewed=new Set<string>();
 const draftAdapter:DraftModel={async draft(ticket,policies){
  const kind=/refund|return|chargeback/i.test(ticket.subject+' '+ticket.detail)?'refund':/billing|invoice|charge/i.test(ticket.subject+' '+ticket.detail)?'billing':/shipping|delivery|order/i.test(ticket.subject+' '+ticket.detail)?'shipping':'vip';
- const policy=policies.find((p)=>p.fact.toLowerCase().includes(kind))??policies.find((p)=>p.fact.includes('Armalo'))??policies[0]!;
- return validateDraft({text:`Internal draft for ${ticket.customer}: I can help with "${ticket.subject}". ${policy.fact.replace(/^Demo policy: /,'')} This is an unsent draft for review.`,policyId:policy.id,needsReview:kind==='refund',model:'Offline draft adapter'},policies);
+ const policy=/follow.up|prior review/i.test(ticket.subject+' '+ticket.detail) ? policies.find((p)=>p.fact.startsWith('Demo review note')) : undefined;
+ const selected=policy??policies.find((p)=>p.fact.toLowerCase().includes(kind))??policies[0]!;
+ return validateDraft({text:`Internal draft for ${ticket.customer}: I can help with "${ticket.subject}". ${selected.fact.replace(/^Demo policy: /,'')} This is an unsent draft for review.`,policyId:selected.id,needsReview:kind==='refund',model:'Offline draft adapter'},policies);
 }};
 function policies():TeamPolicy[]{return verified.map(({id,fact,source})=>({id,fact,source}))}
 function publicState(){return {tickets:state.tickets,busy:state.busy,error:state.error,model:state.model,memory:{source:'local GBrain PGLite',status:'recalled',factId:verified[0]!.id,fact:verified[0]!.fact,writer:writer[0]!.id,reader,provenance:verified[0]!.source,note:'Independent readback',facts:verified.map(({id,fact,topic,tags,source})=>({id,fact,topic,tags,source}))}}}
@@ -54,6 +56,7 @@ createServer(async(req,res)=>{
      const dispatch=await fixture.service.send(actor,{requestId:`live-ticket-${ticket.id}`,text:`New invented support ticket #${ticket.id}: ${ticket.subject}. ${ticket.detail}. Draft only.`,audience:[worker.id],notify:false});
      // Independent GBrain readback is required for every new draft.
      verified=memory.recall(entity,worker.id,stored).facts;
+     Object.assign(state.tickets.find((t)=>t.id===ticket.id)!,{workerId:worker.id});
      const draft=validateDraft(await draftAdapter.draft(ticket,policies()),policies());
      state.model=draft.model;
      const reply=await fixture.service.send(await fixture.workerCaller(worker.id),{requestId:`live-draft-${ticket.id}`,replyTo:dispatch.id,text:`Internal draft (policy #${draft.policyId}, ${draft.model}): ${draft.text} ${draft.needsReview?'Human review required; no refund issued.':'No customer message sent.'}`,audience:[fixture.root.id],notify:false});
@@ -69,7 +72,7 @@ createServer(async(req,res)=>{
    const message=await fixture.service.send(actor,{requestId:`review-${ticket.id}`,replyTo:ticket.messageId,text,audience:[workers[0]!.id],notify:false});
    reviewed.add(ticket.id);ticket.status=input.decision==='approve'?'Draft approved':'Draft denied';
    // A note is human input, not established company policy. Store as a labeled demo review note.
-   if(note){const rows=memory.write(entity,writer[0]!.id,`Local demo review note from test actor demo-operator for QM message ${message.id}, not Armalo policy`,[{fact:`Demo review note for ticket #${ticket.id}: ${note}`,topic:'review',tags:['human','review']}]);stored.push(...rows);verified=memory.recall(entity,reader,stored).facts}
+   if(note){const rows=memory.write(entity,writer[0]!.id,`Local demo review note from test actor demo-operator for QM message ${message.id}, not a company policy`,[{fact:`Demo review note for ticket #${ticket.id}: ${note}`,topic:'review',tags:['human','review']}]);stored.push(...rows);ticket.reviewNoteId=rows[0]?.id;verified=memory.recall(entity,reader,stored).facts}
    json(res,200,{messageId:message.id,status:ticket.status});return;
   }
   if(req.method==='GET' && u.pathname==='/v1/session'){json(res,200,{session:{id,surface:'web',threadRef:fixture.root.threadRef}});return}

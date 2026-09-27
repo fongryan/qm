@@ -15,13 +15,14 @@ let error = "";
 let busy = false;
 let revealPrivateText = false;
 let selectedMember = "";
+let selectedTicketId = "";
 let timer: ReturnType<typeof setTimeout> | null = null;
 let generation = 0;
 let memoryReceipt: MemoryReceipt | null = null;
 let stallReceipt: StallReceipt | null = null;
 export interface QueueReceipt {source:"local synthetic ticket fixture";total:number;dispatched:number;drafted:number;pending:number;workerIds:string[];events:Array<{ticket:number;worker:string;messageId:string}>}
 let queueReceipt:QueueReceipt|null=null;
-interface LiveDemoState {tickets:Array<{id:string;customer:string;subject:string;detail:string;status:string;draft?:string;policyId?:string;needsReview?:boolean}>;busy:boolean;error?:string;model:string}
+interface LiveDemoState {tickets:Array<{id:string;customer:string;subject:string;detail:string;status:string;draft?:string;policyId?:string;needsReview?:boolean;workerId?:string;reviewNoteId?:string}>;busy:boolean;error?:string;model:string}
 let liveDemo:LiveDemoState|null=null;
 export function setSwarmLiveDemo(next:LiveDemoState|null):void {liveDemo=next;draw();}
 async function submitLiveTicket(e:Event):Promise<void>{
@@ -89,68 +90,51 @@ function draw(): void {
       <div class="swarm-summary"><span class="swarm-live-dot"></span><strong>SUPPORT SWARM</strong><span>${inspect.peers.length} QM members · local demo operator · shared memory</span><span>${messages.length} messages</span>${queueReceipt ? html`<span>${queueReceipt.workerIds.length+3} workers · ${queueReceipt.drafted}/${queueReceipt.total} drafts</span>` : nothing}<span>${busy ? "Refreshing…" : "Refreshes every 3s"}</span></div>
       ${queueReceipt && queueReceipt.workerIds.length ? html`<section class="queue-evidence" aria-label="Synthetic support ticket progress"><div><strong>Support inbox</strong><span>${queueReceipt.drafted} drafts ready / ${queueReceipt.total} demo tickets</span><small>Demo drafts only. No customer sends or refunds.</small></div><div class="queue-track"><div style=${`width:${Math.round(queueReceipt.drafted/queueReceipt.total*100)}%`}></div></div><span>${queueReceipt.pending} awaiting draft · ${queueReceipt.dispatched} assigned</span></section>` : nothing}
       ${liveDemo ? html`<section class="live-ticket" aria-label="Live demo ticket input"><div><strong>Try a ticket</strong><small>${liveDemo.model === 'Offline draft adapter' ? 'Local rules adapter - no live model' : `Live model: ${liveDemo.model}`} · draft only</small></div><form @submit=${submitLiveTicket}><input name="customer" maxlength="120" placeholder="Invented customer name" required /><input name="subject" maxlength="120" placeholder="Ticket subject" required /><input name="detail" maxlength="1200" placeholder="What happened?" required /><button type="submit" ?disabled=${liveDemo.busy}>${liveDemo.busy?'Drafting...':'Draft reply'}</button></form>${liveDemo.error ? html`<small role="alert">Draft failed; no customer message sent.</small>`:nothing}</section>` : nothing}
-      <div class="swarm-workspace">
-      <div class="swarm-sidebar">
+      <div class="support-workbench">
+      ${(queueReceipt || liveDemo) ? html`<section class="ticket-inbox" aria-label="Demo ticket inbox"><div class="ticket-inbox-head"><h2>Ticket inbox</h2><span>${liveDemo?.tickets.length ?? queueReceipt?.total} demo cases</span></div><div class="ticket-list">${(liveDemo ? liveDemo.tickets : Array.from({length:Math.min(queueReceipt!.total,24)},(_,i)=>demoTicket(i+1,queueReceipt!.drafted,queueReceipt!.dispatched))).map((ticket)=>html`<button class="ticket-select ${'id' in ticket && ticket.id === selectedTicketId ? 'selected' : ''}" type="button" @click=${() => { selectedTicketId='id' in ticket ? ticket.id : String(ticket.number);draw(); }}><strong>${ticket.customer}</strong><span>#${String("number" in ticket ? ticket.number : ticket.id).padStart(3,"0")}</span><p>${ticket.subject}</p><small class=${ticket.status === "Waiting on review" || ticket.status === "Awaiting review" ? "status-review" : ticket.status === "Draft ready" ? "status-ready" : "status-progress"}>${ticket.status}</small></button>`)}</div></section>` : nothing}
+      <section class="ticket-detail" aria-label="Selected ticket draft"><span class="detail-kicker">DRAFT WORKSPACE</span>
+      ${liveDemo && liveDemo.tickets.length ? (()=>{const t=liveDemo.tickets.find((x)=>x.id===selectedTicketId) ?? liveDemo.tickets[0]!; const policy=memoryReceipt?.facts?.find((x)=>x.id===t.policyId); return html`
+        <h2>${t.subject}</h2><p class="detail-customer">${t.customer} · Demo ticket #${t.id}</p>
+        <div class="detail-section"><strong>Customer wrote</strong><p>${t.detail}</p></div>
+        <div class="detail-section draft"><strong>${t.status === 'Drafting' ? 'Draft in progress' : 'Internal draft - not sent'}</strong><p>${t.draft ?? 'Waiting for a QM worker draft.'}</p></div>
+        ${policy ? html`<div class="detail-policy"><strong>Why this draft?</strong><p>Team memory #${policy.id}: ${policy.fact.replace(/^Demo policy: /,'')}</p><small>Invented demo rule, verified in local GBrain</small></div>` : nothing}
+        <div class="detail-actions"><span class=${t.status==='Awaiting review'?'review-needed':'review-done'}>${t.status}</span>${t.status==='Awaiting review' ? html`<div class="review-controls"><input aria-label="Review note for ticket ${t.id}" placeholder="Review note (optional)" maxlength="240"/><button type="button" @click=${(e:Event)=>{const input=(e.currentTarget as HTMLElement).parentElement!.querySelector('input')!;void reviewLiveTicket(t.id,'approve',input.value)}}>Approve draft</button><button type="button" @click=${(e:Event)=>{const input=(e.currentTarget as HTMLElement).parentElement!.querySelector('input')!;void reviewLiveTicket(t.id,'deny',input.value)}}>Deny draft</button></div>`:nothing}</div>
+        <small>No customer send or refund is connected to this demo.</small>
+      `})() : html`<div class="detail-empty"><h2>Select a ticket</h2><p>Enter an invented ticket above to see its draft, the memory fact it used, and the review step.</p></div>`}
+      </section>
+      ${liveDemo ? html`<section class="evidence-graph" aria-label="Evidence graph"><div class="graph-heading"><strong>Connected work</strong><span>Edges from this local run</span></div>${(()=>{
+        const tickets=liveDemo.tickets.slice(0,8);const facts=memoryReceipt?.facts?.slice(0,6)??[];
+        const points:Array<{id:string;label:string;kind:string;x:number;y:number}>=[];
+        points.push({id:'human',label:'DEMO OPERATOR',kind:'human',x:45,y:36});
+        inspect.peers.slice(0,9).forEach((m,i)=>points.push({id:m.id,label:i===0?'QM ROOT':i===1?'MEMORY':`WORKER ${i-1}`,kind:i===0?'root':'worker',x:178+(i%2)*67,y:35+Math.floor(i/2)*71}));
+        tickets.forEach((t,i)=>points.push({id:`ticket-${t.id}`,label:`TICKET ${t.id}`,kind:'ticket',x:38+(i%2)*88,y:140+Math.floor(i/2)*66}));
+        facts.forEach((f,i)=>points.push({id:`fact-${f.id}`,label:f.topic==='review'?'REVIEW NOTE':`POLICY ${i+1}`,kind:f.topic==='review'?'note':'policy',x:323+(i%2)*70,y:51+Math.floor(i/2)*82}));
+        const find=(id:string)=>points.find(x=>x.id===id);
+        const edges:Array<{a:string;b:string;label:string}>=[];
+        tickets.forEach(t=>{if(t.workerId&&find(t.workerId))edges.push({a:`ticket-${t.id}`,b:t.workerId,label:'assigned'});if(t.policyId&&find(`fact-${t.policyId}`))edges.push({a:`ticket-${t.id}`,b:`fact-${t.policyId}`,label:'cites'});if(t.reviewNoteId&&find(`fact-${t.reviewNoteId}`)){edges.push({a:'human',b:`fact-${t.reviewNoteId}`,label:'wrote'});edges.push({a:`ticket-${t.id}`,b:'human',label:'reviewed'});}});
+        const h=Math.max(450,180+Math.ceil(tickets.length/2)*68);
+        return svg`<svg viewBox=${`0 0 460 ${h}`} class="evidence-map" role="img" aria-label=${`${points.length} nodes and ${edges.length} observed links`}>
+          ${edges.map(e=>{const a=find(e.a)!,b=find(e.b)!;return svg`<line x1=${a.x} y1=${a.y} x2=${b.x} y2=${b.y} class="evidence-edge"/>`;})}
+          ${points.map(p=>svg`<g class=${`evidence-node ${p.kind}`}><title>${p.label}</title>${p.kind==='policy'||p.kind==='note'?svg`<rect x=${p.x-8} y=${p.y-8} width="16" height="16" rx="2"/>`:p.kind==='ticket'?svg`<rect x=${p.x-8} y=${p.y-8} width="16" height="16" transform=${`rotate(45 ${p.x} ${p.y})`}/>`:svg`<circle cx=${p.x} cy=${p.y} r="9"/>`}<text x=${p.x+12} y=${p.y+3}>${p.label}</text></g>`)}
+        </svg>`;
+      })()}<div class="graph-legend">◆ ticket · ● QM member · ■ GBrain memory · ◉ test operator<br/>Lines: QM assignment, cited memory, or test review write; no inferred links.</div></section>`:nothing}
+      <div class="memory-column">
       ${memoryLink && memoryReceipt ? html`<section class="memory-evidence" aria-label="Team memory">
         <span class="memory-kicker">GBRAIN · SHARED KNOWLEDGE</span><h2>Team memory</h2>
-        <p class="memory-intro">Invented demo policies and a source-linked public Armalo fact, stored and read back from local GBrain.</p>
-        <ul class="memory-policies">${(memoryReceipt.facts ?? []).map((fact)=>html`<li><span>${fact.topic === "product" ? "PUBLIC SOURCE" : fact.topic === "review" ? "LOCAL DEMO NOTE" : fact.topic === "approval" ? "DEMO REVIEW RULE" : "DEMO WORKFLOW"}</span><p>${fact.fact.replace(/^(Synthetic support (policy|workflow)|Demo policy): /, "")}</p>${fact.source.startsWith("https://") ? html`<a href=${fact.source.split(" ")[0]} target="_blank" rel="noopener noreferrer">Source: armalo.ai</a>` : nothing}</li>`)}</ul>
+        <p class="memory-intro">Invented demo rules stored and read back from local GBrain.</p>
+        <ul class="memory-policies">${(memoryReceipt.facts ?? []).map((fact)=>html`<li><span>${fact.topic === "review" ? "LOCAL DEMO NOTE" : fact.topic === "approval" ? "DEMO REVIEW RULE" : "DEMO WORKFLOW"}</span><p>${fact.fact.replace(/^(Synthetic support (policy|workflow)|Demo policy): /, "")}</p></li>`)}</ul>
         <small>Exact ID, text and source readback from local GBrain.</small>
       </section>` : nothing}
-      ${(queueReceipt || liveDemo) ? html`<section class="ticket-inbox" aria-label="Demo ticket inbox"><div class="ticket-inbox-head"><h2>Tickets</h2><span>${liveDemo?.tickets.length ?? queueReceipt?.total} demo cases</span></div><div class="ticket-list">${(liveDemo ? liveDemo.tickets : Array.from({length:Math.min(queueReceipt!.total,24)},(_,i)=>demoTicket(i+1,queueReceipt!.drafted,queueReceipt!.dispatched))).map((ticket)=>html`<article class="ticket-row"><div><strong>${ticket.customer}</strong><span>#${String("number" in ticket ? ticket.number : ticket.id).padStart(3,"0")}</span></div><p>${ticket.subject}</p><small class=${ticket.status === "Waiting on review" || ticket.status === "Awaiting review" ? "status-review" : ticket.status === "Draft ready" ? "status-ready" : "status-progress"}>${ticket.status}</small>${'draft' in ticket && ticket.draft ? html`<p class="ticket-draft">${ticket.draft} <span>Policy #${ticket.policyId}</span></p>`:nothing}${'id' in ticket && ticket.status==='Awaiting review' ? html`<div class="review-controls"><input aria-label="Review note for ticket ${ticket.id}" placeholder="Optional review note" maxlength="240"/><button type="button" @click=${(e:Event)=>{const input=(e.currentTarget as HTMLElement).parentElement!.querySelector('input')!;void reviewLiveTicket(ticket.id,'approve',input.value)}}>Approve draft</button><button type="button" @click=${(e:Event)=>{const input=(e.currentTarget as HTMLElement).parentElement!.querySelector('input')!;void reviewLiveTicket(ticket.id,'deny',input.value)}}>Deny draft</button></div>`:nothing}</article>`)}</div></section>` : nothing}
       </div>
-      <section class="swarm-mission" aria-label="Swarm mission control">
-        <div class="mission-meta"><span>TEAM ACTIVITY</span><span>${inspect.peers.length} MEMBERS · ${signals!.queued} QUEUED · ${signals!.failed} FAILED</span></div>
-        ${fixtureHumanMessage ? html`<div class="human-fixture-badge"><span class="human-avatar">H</span><div><strong>Review recorded</strong><small>Test actor Alice reviewed the demo draft. No refund issued.</small></div></div>` : nothing}
-        ${nonReply ? html`<div class="mission-alert stalled"><strong>NEEDS REVIEW</strong><span>Refund for Maya R. is waiting on review, ${nonReply.seconds}s</span><small>No refund has been issued.</small></div>` : signals!.failed || signals!.pending || signals!.failedMembers || signals!.reserved ? html`<div class="mission-alert"><strong>DELIVERY ATTENTION</strong><span>${signals!.failed} failed · ${signals!.pending} pending deliveries · ${signals!.failedMembers} failed agents</span></div>` : html`<div class="mission-alert quiet"><strong>DELIVERIES LOOK CLEAR</strong><span>${signals!.queued} queued, not yet confirmed complete</span></div>`}
-        ${selectedMember ? html`<aside class="mission-drawer" aria-label="Selected member evidence">
-          <button class="drawer-close" @click=${() => { selectedMember=""; draw(); }} aria-label="Close evidence">×</button>
-          <span class="drawer-eyebrow">TEAM MEMBER / ${inspect.peers.findIndex((m) => m.id === selectedMember)+1}</span>
-          <h2>${selectedMember === inspect!.self.id ? "Orchestrator" : `Worker ${inspect.peers.findIndex((m) => m.id === selectedMember)+1}`}</h2>
-          <p>State: ${inspect.peers.find((m) => m.id === selectedMember)?.state ?? "Unknown"}</p>
-          <p>${messages.filter((m) => m.senderId === selectedMember).length} messages sent; ${messages.filter((m) => Object.hasOwn(m.notifications,selectedMember)).length} notifications in loaded feed.</p>
-          <p>Read-only activity.</p>
-          ${revealPrivateText && inspect.peers.find((m) => m.id === selectedMember)?.sessionId ? html`<a href=${withBase(`/s/${encodeURIComponent(inspect.peers.find((m)=>m.id===selectedMember)!.sessionId!)}`)}>Open member session</a>` : nothing}
-        </aside>` : nothing}
-        ${svg`<svg class="mission-graph" viewBox=${`0 0 900 ${Math.max(500, graphHeight + 145)}`} role="img" aria-label=${`${nodes.length} QM swarm members and parent links`}>
-
-          ${nodes.map((node) => {
-            const parent = nodes.find((n) => n.id === node.parentId);
-            return parent ? svg`<path class="mission-link" d=${`M ${parent.x} ${parent.y + 85} L ${node.x} ${node.y + 85}`} />` : nothing;
-          })}
-          ${memoryLink ? (() => {const from=nodes.find((n)=>n.id===memoryLink.from)!;const to=nodes.find((n)=>n.id===memoryLink.to)!;return svg`<path class="memory-link" d=${`M ${from.x} ${from.y+85} Q 450 -120 ${to.x} ${to.y+85}`} />`;})() : nothing}
-          ${nodes.filter((node) => node.parentId && messages.some((m) => m.audience.includes(node.id) || m.senderId === node.id)).map((node) => {
-            const parent = nodes.find((n) => n.id === node.parentId)!;
-            const path = `M ${parent.x} ${parent.y + 85} L ${node.x} ${node.y + 85}`;
-            return svg`<circle class="mission-particle" r="3"><animateMotion dur="4s" begin="${(nodes.indexOf(node)%5)*-.7}s" repeatCount="indefinite" path=${path}/></circle>`;
-          })}
-          ${nodes.map((node) => {
-            const member = inspect!.peers.find((m) => m.id === node.id)!;
-            const number = inspect!.peers.indexOf(member) + 1;
-            const volume = messages.filter((m) => m.senderId === node.id).length;
-            const label = member.id === inspect!.self.id ? "ORCHESTRATOR" : `WORKER ${String(number).padStart(2,"0")}`;
-            const trouble = signals!.members.some((m) => m.memberId === node.id);
-            return svg`<g class="mission-agent ${node.state} ${trouble || nonReply?.memberId === node.id ? "attention" : ""} ${selectedMember === node.id ? "selected" : ""}"
-                role="button" tabindex="0" aria-label=${`${label}, ${node.state}, ${volume} messages`} @click=${() => { selectedMember=node.id; draw(); }}
-                @keydown=${(e: KeyboardEvent) => { if(e.key === "Enter" || e.key === " "){e.preventDefault(); selectedMember=node.id; draw();} }}>
-              <circle class="agent-aura" cx=${node.x} cy=${node.y + 85} r=${38 + Math.min(14,volume*4)} />
-              <circle class="agent-core" cx=${node.x} cy=${node.y + 85} r=${25 + Math.min(9,volume*3)} />
-              <text class="agent-number" x=${node.x} y=${node.y + 91} text-anchor="middle">${String(number).padStart(2,"0")}</text>
-              <text class="agent-label" x=${node.x} y=${node.y + 141} text-anchor="middle">${label}</text>
-              <text class="agent-state" x=${node.x} y=${node.y + 158} text-anchor="middle">${node.state.toUpperCase()} · ${volume} MSG</text>
-            </g>`;
-          })}
-        </svg>`}
-        <div class="mission-legend"><span><i class="ready"></i>READY</span><span><i class="reserved"></i>RESERVED</span><span><i class="failed"></i>FAILED</span>${memoryLink ? html`<span><i class="memory"></i>TEAM MEMORY SHARED</span>` : nothing}</div>
-      </section>
       </div>
+      <div class="swarm-status-strip" aria-label="QM swarm status"><span>QM SWARM</span><strong>${inspect.peers.length} members</strong><span>${signals!.queued} queued · ${signals!.failed} failed</span>${nonReply ? html`<span class="status-attention">Refund demo waiting ${nonReply.seconds}s</span>` : nothing}<span>Local snapshot · no model-health inference</span></div>
       <section class="swarm-timeline" aria-label="Swarm activity"><h2>Activity <small>QM messages and delivery events</small></h2>
         ${events.filter((e) => e.kind !== "member").length ? events.filter((e) => e.kind !== "member").map((event) => event.kind === "message"
           ? html`<article class="swarm-activity"><span class="swarm-dot"></span><div><div class="swarm-activity-top"><strong>${event.author === "human" ? "Human" : "Agent"} ${inspect!.peers.findIndex((m) => m.id === event.memberId) + 1 || "?"}</strong><time>${new Date(event.at).toLocaleTimeString()}</time></div><p>${revealPrivateText ? event.text : "Details hidden"}</p><small>#${event.seq} · to ${event.audience.length} member${event.audience.length === 1 ? "" : "s"}${event.replyTo ? html` · replies to #${messages.find((m) => m.id === event.replyTo)?.seq ?? "earlier message"}` : nothing}</small></div></article>`
           : html`<article class="swarm-activity notification"><span class="swarm-dot"></span><div><strong>Member ${inspect!.peers.findIndex((m) => m.id === event.memberId) + 1 || "?"}</strong> notification ${event.state} for #${event.messageSeq}${event.runId ? html` · run ${revealPrivateText ? html`<code>${event.runId}</code>` : "recorded"}` : nothing}</div></article>`)
           : html`<p class="swarm-empty">No swarm messages yet. Member state is above.</p>`}
       </section>
-      <p class="swarm-disclaimer">Demo data. Local test actor, not an authenticated Ryan account. Scripted workers unless explicitly labeled River. Built today on QM + GBrain. No customer sends or refunds. Member states are snapshots; the feed shows up to 256 messages.</p>
+      <p class="swarm-disclaimer">Demo data. Local test actor, not the user. Local deterministic draft adapter. Built today on QM + GBrain. No customer sends or refunds. Member states are snapshots; the feed shows up to 256 messages.</p>
     ` : html`<div class="swarm-empty">${busy ? "Loading…" : "Enter a session ID to inspect its swarm."}</div>`}
   `, host);
 }
